@@ -45,10 +45,13 @@ object ScreenLockPinStore {
         catch (_: Exception) { false }
         catch (_: AssertionError) { false }
       } ?: false
-      if (correct || decoyCorrect) {
+      if (correct) {
         ScreenLockPreferences.update(context) { it.copy(failures = 0, blockedUntil = 0, bootCount = boot) }
-        return if (correct) Result.Success else checkNotNull(decoy).let { Result.Decoy(it.component, it.alias) }
+        return Result.Success
       }
+      // A decoy is not normal authentication: knowing it must not let someone
+      // reset the normal PIN's guess counter between unsuccessful attempts.
+      if (decoyCorrect) return checkNotNull(decoy).let { Result.Decoy(it.component, it.alias) }
       val failures = (record.failures + 1).coerceAtMost(30)
       val delay = ScreenLockBackoff.delayMillis(failures)
       ScreenLockPreferences.update(context) { it.copy(failures = failures, blockedUntil = now + delay, bootCount = boot) }

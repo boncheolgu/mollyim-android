@@ -73,8 +73,9 @@ class ScreenLockDecoyPinStoreTest {
     assertTrue(result is ScreenLockPinStore.Result.Decoy)
     assertFalse(ScreenLockController.isAccessAllowed())
     assertEquals(generation, ScreenLockController.authenticationGeneration())
-    assertEquals(0, ScreenLockPreferences.read(application).failures)
+    assertEquals(1, ScreenLockPreferences.read(application).failures)
     assertEquals(ScreenLockPinStore.Result.Success, ScreenLockPinStore.verify(application, "123456".toCharArray(), true))
+    assertEquals(0, ScreenLockPreferences.read(application).failures)
   }
 
   @Test fun normalPinCannotAlsoBeRegisteredAsDecoy() {
@@ -91,6 +92,16 @@ class ScreenLockDecoyPinStoreTest {
     assertEquals(5, ScreenLockPreferences.read(application).failures)
     assertTrue(ScreenLockPinStore.verify(application, "654321".toCharArray(), true) is ScreenLockPinStore.Result.Blocked)
     assertTrue(ScreenLockPinStore.verify(application, "123456".toCharArray(), true) is ScreenLockPinStore.Result.Blocked)
+  }
+
+  @Test fun knowingTheAlternatePinCannotResetTheNormalPinsGuessCounter() {
+    assertEquals(ScreenLockPinStore.Result.Success, install())
+    repeat(4) { ScreenLockPinStore.verify(application, "999999".toCharArray(), true) }
+    assertTrue(ScreenLockPinStore.verify(application, "654321".toCharArray(), true) is ScreenLockPinStore.Result.Decoy)
+    assertEquals(4, ScreenLockPreferences.read(application).failures)
+    assertTrue(ScreenLockPinStore.verify(application, "999999".toCharArray(), true) is ScreenLockPinStore.Result.Blocked)
+    assertEquals(5, ScreenLockPreferences.read(application).failures)
+    assertTrue(ScreenLockPinStore.verify(application, "654321".toCharArray(), true) is ScreenLockPinStore.Result.Blocked)
   }
 
   @Test fun missingAlternateKeyDoesNotBreakTheNormalPinOrUnlockOnAlternateInput() {
