@@ -15,13 +15,17 @@ object ScreenLockPinStore {
     object Success : Result()
     object Incorrect : Result()
     object Unavailable : Result()
+    object Duplicate : Result()
+    data class Decoy(val component: String, val alias: String) : Result()
     data class Blocked(val milliseconds: Long) : Result()
   }
 
   private const val PREFIX = "molly-screen-pin-"
+  private const val DECOY_PREFIX = "memoly-decoy-pin-"
 
+  @JvmStatic
   @Synchronized
-  fun verify(context: Context, pin: CharArray): Result {
+  fun verify(context: Context, pin: CharArray, allowDecoy: Boolean = false): Result {
     try {
       var record = ScreenLockPreferences.read(context)
       if (record.mode != ScreenLockMode.PIN) return Result.Unavailable
@@ -32,15 +36,18 @@ object ScreenLockPinStore {
         ScreenLockPreferences.update(context) { it.copy(blockedUntil = record.blockedUntil, bootCount = boot) }
       }
       if (record.blockedUntil > now) return Result.Blocked(record.blockedUntil - now)
-      val alias = record.alias?.takeIf { it.startsWith(PREFIX) } ?: return Result.Unavailable
-      val salt = Base64.decode(record.salt ?: return Result.Unavailable, Base64.NO_WRAP)
-      val expected = Base64.decode(record.verifier ?: return Result.Unavailable, Base64.NO_WRAP)
-      if (salt.size != 32 || expected.size != 32) return Result.Unavailable
-      val actual = ScreenLockPinVerifier.calculate(KeyStoreHelper.getKeyStoreEntryHmac(alias), salt, pin)
-      val correct = try { MessageDigest.isEqual(expected, actual) } finally { actual.fill(0) }
-      if (correct) {
+      val correct = matches(record.alias, record.salt, record.verifier, pin, false)
+      // Classify one attempt before updating the common retry limit. Never authenticate
+      // a settings confirmation with the alternate PIN, even when it is configured.
+      val decoy = if (allowDecoy) record.decoy else null
+      val decoyCorrect = decoy?.let {
+        try { matches(it.alias, it.salt, it.verifier, pin, true) }
+        catch (_: Exception) { false }
+        catch (_: AssertionError) { false }
+      } ?: false
+      if (correct || decoyCorrect) {
         ScreenLockPreferences.update(context) { it.copy(failures = 0, blockedUntil = 0, bootCount = boot) }
-        return Result.Success
+        return if (correct) Result.Success else checkNotNull(decoy).let { Result.Decoy(it.component, it.alias) }
       }
       val failures = (record.failures + 1).coerceAtMost(30)
       val delay = ScreenLockBackoff.delayMillis(failures)
@@ -55,6 +62,7 @@ object ScreenLockPinStore {
     }
   }
 
+  @JvmStatic
   @Synchronized
   fun install(context: Context, pin: CharArray, generation: Long, active: () -> Boolean): Boolean {
     val alias = PREFIX + UUID.randomUUID()
@@ -77,12 +85,70 @@ object ScreenLockPinStore {
         ScreenLockController.configure(context, true)
       }
       verifier.fill(0)
-      if (installed) old.alias?.let { deleteKey(it) }
+      if (installed) {
+        old.alias?.let { deleteKey(it) }
+        old.decoy?.alias?.let { deleteKey(it) }
+      }
       return installed
     } finally {
       pin.fill('\u0000')
       if (!installed) deleteKey(alias)
     }
+  }
+
+  private fun matches(alias: String?, salt: String?, verifier: String?, pin: CharArray, decoy: Boolean): Boolean {
+    val keyAlias = requireNotNull(alias)
+    require(keyAlias.startsWith(if (decoy) DECOY_PREFIX else PREFIX))
+    val saltBytes = Base64.decode(requireNotNull(salt), Base64.NO_WRAP)
+    val expected = Base64.decode(requireNotNull(verifier), Base64.NO_WRAP)
+    require(saltBytes.size == 32 && expected.size == 32)
+    val actual = ScreenLockPinVerifier.calculate(KeyStoreHelper.getKeyStoreEntryHmac(keyAlias), saltBytes, pin, decoy)
+    return try { MessageDigest.isEqual(expected, actual) } finally { actual.fill(0) }
+  }
+
+  @JvmStatic
+  @Synchronized
+  fun installDecoy(context: Context, pin: CharArray, component: String, generation: Long, active: () -> Boolean): Result {
+    val alias = DECOY_PREFIX + UUID.randomUUID()
+    var installed = false
+    try {
+      val old = ScreenLockPreferences.read(context)
+      if (old.mode != ScreenLockMode.PIN || !ScreenLockController.isAccessAllowed()) return Result.Unavailable
+      if (matches(old.alias, old.salt, old.verifier, pin, false)) return Result.Duplicate
+      if (!ScreenLockDecoyLauncher.isValidTarget(context, component)) return Result.Unavailable
+      val key = KeyStoreHelper.createKeyStoreEntryHmac(alias, false)
+      val salt = ByteArray(32).also { SecureRandom().nextBytes(it) }
+      val verifier = ScreenLockPinVerifier.calculate(key, salt, pin, true)
+      try {
+        installed = ScreenLockController.runIfCurrentAuthentication(generation) {
+          check(active() && ScreenLockController.isAccessAllowed())
+          val current = ScreenLockPreferences.read(context)
+          check(current.mode == ScreenLockMode.PIN && current.alias == old.alias)
+          ScreenLockPreferences.write(context, current.copy(decoy = ScreenLockPreferences.Decoy(
+            alias, Base64.encodeToString(salt, Base64.NO_WRAP), Base64.encodeToString(verifier, Base64.NO_WRAP), component
+          )))
+          ScreenLockController.configure(context, true)
+        }
+      } finally { verifier.fill(0) }
+      if (installed) old.decoy?.alias?.let { deleteKey(it) }
+      return if (installed) Result.Success else Result.Unavailable
+    } finally {
+      pin.fill('\u0000')
+      if (!installed) deleteKey(alias)
+    }
+  }
+
+  @JvmStatic
+  @Synchronized
+  fun clearDecoy(context: Context, generation: Long): Boolean {
+    val old = ScreenLockPreferences.read(context)
+    if (old.mode != ScreenLockMode.PIN || !ScreenLockController.isAccessAllowed()) return false
+    val cleared = ScreenLockController.runIfCurrentAuthentication(generation) {
+      ScreenLockPreferences.write(context, ScreenLockPreferences.read(context).copy(decoy = null))
+      ScreenLockController.configure(context, true)
+    }
+    if (cleared) old.decoy?.alias?.let { deleteKey(it) }
+    return cleared
   }
 
   @JvmStatic
@@ -92,8 +158,10 @@ object ScreenLockPinStore {
     val old = ScreenLockPreferences.read(context)
     ScreenLockPreferences.write(context, ScreenLockPreferences.Record(mode, old.timeoutSeconds))
     old.alias?.let { deleteKey(it) }
+    old.decoy?.alias?.let { deleteKey(it) }
   }
 
+  @JvmStatic
   @Synchronized
   fun changeMode(context: Context, mode: ScreenLockMode, generation: Long): Boolean {
     return ScreenLockController.runIfCurrentAuthentication(generation) {
@@ -103,7 +171,7 @@ object ScreenLockPinStore {
   }
 
   private fun deleteKey(alias: String) {
-    if (!alias.startsWith(PREFIX)) return
+    if (!alias.startsWith(PREFIX) && !alias.startsWith(DECOY_PREFIX)) return
     try {
       KeyStoreHelper.deleteKeyStoreEntry(alias)
     } catch (_: Exception) {

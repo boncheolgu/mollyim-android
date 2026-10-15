@@ -22,6 +22,7 @@ import java.util.IdentityHashMap
 /** Counts visible activities rather than waiting for ProcessLifecycleOwner's 700 ms debounce. */
 internal class ScreenLockVisibilityObserver(private val application: Application) : Application.ActivityLifecycleCallbacks {
   private val visible = Collections.newSetFromMap(IdentityHashMap<Activity, Boolean>())
+  private val created = Collections.newSetFromMap(IdentityHashMap<Activity, Boolean>())
   private val guardedWindows = IdentityHashMap<Activity, Int>()
   private val tasks = ScreenLockTaskTracker()
   @Volatile var hasVisibleActivities: Boolean = false
@@ -50,9 +51,21 @@ internal class ScreenLockVisibilityObserver(private val application: Application
   }
 
   fun creating(activity: Activity) {
+    created.add(activity)
     // The task-removal workaround has no UI and must not become the tracked app task.
     if (activity is DummyActivity || activity.isFinishing || activity.isDestroyed) return
     if (tasks.entering(activity.taskId) { existingTasks() }) ScreenLockController.onTaskRemoved(activity)
+  }
+
+  fun prepareDecoyExit() {
+    created.toList().forEach {
+      if (it is BaseActivity) it.onScreenLockDecoyExit()
+      else ScreenLockController.hideProtectedWindow(it.window)
+    }
+  }
+
+  fun finishDecoyExit() {
+    created.toList().forEach { if (!it.isFinishing && !it.isDestroyed) it.finish() }
   }
 
   @Suppress("DEPRECATION")
@@ -113,7 +126,7 @@ internal class ScreenLockVisibilityObserver(private val application: Application
     }
   }
   override fun onActivityStopped(activity: Activity) = stopping(activity)
-  override fun onActivityDestroyed(activity: Activity) { stopping(activity); guardedWindows.remove(activity) }
+  override fun onActivityDestroyed(activity: Activity) { stopping(activity); guardedWindows.remove(activity); created.remove(activity) }
   override fun onActivityCreated(activity: Activity, state: Bundle?) {
     creating(activity)
     if (activity !is BaseActivity) protectWindow(activity)

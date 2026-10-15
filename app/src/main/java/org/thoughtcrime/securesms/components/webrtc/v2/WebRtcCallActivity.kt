@@ -657,7 +657,7 @@ class WebRtcCallActivity : PassphraseRequiredActivity(), SafetyNumberChangeDialo
           lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             launch {
               viewModel.canEnterPipMode().collectLatest {
-                pipBuilderParams.setAutoEnterEnabled(it)
+                pipBuilderParams.setAutoEnterEnabled(it && !isScreenLockDecoyExiting)
                 tryToSetPictureInPictureParams()
               }
             }
@@ -1180,6 +1180,7 @@ class WebRtcCallActivity : PassphraseRequiredActivity(), SafetyNumberChangeDialo
   }
 
   private fun enterPipModeIfPossible(): Boolean {
+    if (isScreenLockDecoyExiting) return false
     if (isSystemPipEnabledAndAvailable()) {
       if (viewModel.canEnterPipMode().value == true) {
         try {
@@ -1206,6 +1207,14 @@ class WebRtcCallActivity : PassphraseRequiredActivity(), SafetyNumberChangeDialo
 
   private fun isSystemPipEnabledAndAvailable(): Boolean {
     return Build.VERSION.SDK_INT >= 26 && packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+  }
+
+  override fun onPrepareScreenLockDecoyExit() {
+    super.onPrepareScreenLockDecoyExit()
+    if (Build.VERSION.SDK_INT >= 31 && ::pipBuilderParams.isInitialized) {
+      pipBuilderParams.setAutoEnterEnabled(false)
+      tryToSetPictureInPictureParams()
+    }
   }
 
   private fun resolveOrientationFromContext(): Orientation {

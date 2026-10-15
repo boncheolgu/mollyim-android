@@ -31,6 +31,10 @@ class ScreenLockPinVerifierTest {
     assertEquals(32, tag("0123456789012345").size)
   }
 
+  @Test fun alternateCredentialHasADistinctPurposeEvenWithTheSameKeyAndSalt() {
+    assertFalse(MessageDigest.isEqual(tag("123456"), ScreenLockPinVerifier.calculate(key, salt, "123456".toCharArray(), true)))
+  }
+
   @Test(expected = IllegalArgumentException::class) fun tooShortPinIsRejected() { tag("123") }
   @Test(expected = IllegalArgumentException::class) fun tooLongPinIsRejected() { tag("12345678901234567") }
   @Test(expected = IllegalArgumentException::class) fun nonNumericPinIsRejected() { tag("123a") }

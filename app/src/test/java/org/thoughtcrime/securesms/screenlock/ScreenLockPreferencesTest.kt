@@ -91,4 +91,24 @@ class ScreenLockPreferencesTest {
     assertEquals(0L, ScreenLockPreferences.getTimeoutSeconds(context))
     assertEquals(ScreenLockMode.BIOMETRIC, ScreenLockPreferences.getMode(context))
   }
+
+  @Test fun optionalAlternateRecordSurvivesDeviceLocalRoundTrip() {
+    val decoy = ScreenLockPreferences.Decoy("memoly-decoy-pin-test", "salt", "tag", "example.notes/example.notes.Main")
+    ScreenLockPreferences.write(context, ScreenLockPreferences.Record(ScreenLockMode.PIN, alias = "normal", verifier = "normal-tag", decoy = decoy))
+    clearCache()
+    assertEquals(decoy, ScreenLockPreferences.read(context).decoy)
+    assertEquals(decoy.component, ScreenLockPreferences.getDecoyTarget(context))
+  }
+
+  @Test fun malformedOptionalRecordDoesNotDiscardTheNormalPin() {
+    ScreenLockPreferences.write(context, ScreenLockPreferences.Record(ScreenLockMode.PIN, alias = "normal", verifier = "normal-tag"))
+    val json = org.json.JSONObject(recordFile().readText()).put("decoy", org.json.JSONObject().put("alias", "incomplete"))
+    recordFile().writeText(json.toString())
+    clearCache()
+    val restored = ScreenLockPreferences.read(context)
+    assertEquals("normal", restored.alias)
+    assertEquals("normal-tag", restored.verifier)
+    assertNull(restored.decoy)
+    assertEquals(ScreenLockMode.PIN, restored.mode)
+  }
 }

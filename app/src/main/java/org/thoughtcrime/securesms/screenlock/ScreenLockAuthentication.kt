@@ -7,7 +7,14 @@ import org.thoughtcrime.securesms.biometric.BiometricDialogFragment
 
 object ScreenLockAuthentication {
   @JvmStatic
-  fun authenticate(activity: FragmentActivity, listener: BiometricDialogFragment.Listener, fullScreen: Boolean) {
+  fun authenticate(activity: FragmentActivity, listener: BiometricDialogFragment.Listener, fullScreen: Boolean) =
+    authenticate(activity, listener, fullScreen, false)
+
+  @JvmStatic
+  fun authenticateForUnlock(activity: FragmentActivity, listener: BiometricDialogFragment.Listener, fullScreen: Boolean) =
+    authenticate(activity, listener, fullScreen, true)
+
+  private fun authenticate(activity: FragmentActivity, listener: BiometricDialogFragment.Listener, fullScreen: Boolean, allowDecoy: Boolean) {
     if (activity.isFinishing || activity.isDestroyed || activity.supportFragmentManager.isStateSaved) {
       listener.onCancel(false)
       return
@@ -23,7 +30,7 @@ object ScreenLockAuthentication {
       override fun onNotEnrolled(message: CharSequence): Boolean = listener.onNotEnrolled(message)
     }
     when (ScreenLockPreferences.getMode(activity)) {
-      ScreenLockMode.PIN -> ScreenLockPinDialogFragment.show(activity, false, guarded)
+      ScreenLockMode.PIN -> ScreenLockPinDialogFragment.show(activity, false, guarded, allowDecoy)
       ScreenLockMode.BIOMETRIC -> BiometricDialogFragment.findOrAddFragment(activity.supportFragmentManager, fullScreen).showPrompt(activity, guarded)
       ScreenLockMode.OFF -> guarded.onSuccess()
     }

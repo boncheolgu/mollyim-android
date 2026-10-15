@@ -14,6 +14,8 @@ enum class ScreenLockMode { OFF, BIOMETRIC, PIN }
 object ScreenLockPreferences {
   private val TAG = Log.tag(ScreenLockPreferences::class.java)
   private const val MODE_MARKER = "screen-lock-mode"
+  internal data class Decoy(val alias: String, val salt: String, val verifier: String, val component: String)
+
   internal data class Record(
     val mode: ScreenLockMode,
     val timeoutSeconds: Long = 0,
@@ -22,7 +24,8 @@ object ScreenLockPreferences {
     val verifier: String? = null,
     val failures: Int = 0,
     val blockedUntil: Long = 0,
-    val bootCount: Int = -1
+    val bootCount: Int = -1,
+    val decoy: Decoy? = null
   )
 
   private var file: AtomicFile? = null
@@ -31,6 +34,7 @@ object ScreenLockPreferences {
 
   @JvmStatic fun getMode(context: Context): ScreenLockMode = read(context).mode
   @JvmStatic fun getTimeoutSeconds(context: Context): Long = read(context).timeoutSeconds
+  @JvmStatic fun getDecoyTarget(context: Context): String? = read(context).takeIf { it.mode == ScreenLockMode.PIN }?.decoy?.component
 
   @Synchronized
   internal fun read(context: Context): Record {
@@ -49,7 +53,12 @@ object ScreenLockPreferences {
           json.optString("verifier").takeIf { it.isNotEmpty() },
           json.getInt("failures").also { check(it in 0..30) },
           json.getLong("blockedUntil").also { check(it >= 0) },
-          json.getInt("bootCount")
+          json.getInt("bootCount"),
+          // An invalid optional decoy must not discard a valid normal credential.
+          json.optJSONObject("decoy")?.let {
+            try { Decoy(it.getString("alias"), it.getString("salt"), it.getString("verifier"), it.getString("component")) }
+            catch (_: Exception) { null }
+          }
         )
       } catch (_: Exception) {
         // A damaged enabled record must not silently turn authentication off.
@@ -78,6 +87,10 @@ object ScreenLockPreferences {
       .put("salt", record.salt ?: "").put("verifier", record.verifier ?: "")
       .put("failures", record.failures).put("blockedUntil", record.blockedUntil)
       .put("bootCount", record.bootCount)
+    if (record.mode == ScreenLockMode.PIN) record.decoy?.let {
+      json.put("decoy", JSONObject().put("alias", it.alias).put("salt", it.salt)
+        .put("verifier", it.verifier).put("component", it.component))
+    }
     val storage = checkNotNull(file)
     val output = storage.startWrite()
     try {
