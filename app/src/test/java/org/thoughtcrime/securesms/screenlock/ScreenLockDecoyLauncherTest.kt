@@ -25,6 +25,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.thoughtcrime.securesms.ScreenLockController
+import org.thoughtcrime.securesms.decoynotes.DecoyNotesActivity
 import org.thoughtcrime.securesms.service.KeyCachingService
 import java.io.File
 
@@ -86,8 +87,8 @@ class ScreenLockDecoyLauncherTest {
     return resolve
   }
 
-  private fun task(packageName: String): ActivityManager.AppTask = mockk<ActivityManager.AppTask>().also {
-    every { it.taskInfo } returns ActivityManager.RecentTaskInfo().apply { baseIntent = Intent().setComponent(ComponentName(packageName, "$packageName.Root")) }
+  private fun task(packageName: String, name: String = "$packageName.Root"): ActivityManager.AppTask = mockk<ActivityManager.AppTask>().also {
+    every { it.taskInfo } returns ActivityManager.RecentTaskInfo().apply { baseIntent = Intent().setComponent(ComponentName(packageName, name)) }
     every { it.finishAndRemoveTask() } just Runs
   }
 
@@ -148,8 +149,35 @@ class ScreenLockDecoyLauncherTest {
   @Test fun selectionRejectsMemolyAndNonExportedActivities() {
     addTarget(application.packageName, "MemolyLauncher")
     addTarget(exported = false)
-    assertTrue(ScreenLockDecoyLauncher.targets(application).isEmpty())
+    assertEquals(listOf(ScreenLockDecoyLauncher.BUILT_IN_NOTES), ScreenLockDecoyLauncher.targets(application).map { it.component })
     assertFalse(ScreenLockDecoyLauncher.isValidTarget(application, alternate.component))
     assertFalse(ScreenLockDecoyLauncher.isValidTarget(application, ComponentName(application.packageName, "MemolyLauncher").flattenToString()))
+  }
+
+  @Test fun builtInNotesAreAvailableWithoutAnyExternalApps() {
+    assertTrue(ScreenLockDecoyLauncher.isValidTarget(application, ScreenLockDecoyLauncher.BUILT_IN_NOTES))
+    val target = ScreenLockDecoyLauncher.targets(application).first()
+    assertEquals(ScreenLockDecoyLauncher.BUILT_IN_NOTES, target.component)
+    assertEquals(target.label, ScreenLockDecoyLauncher.label(application, target.component))
+    // Only the fixed token can select this private activity, not an arbitrary own component.
+    assertFalse(ScreenLockDecoyLauncher.isValidTarget(application, ComponentName(application, DecoyNotesActivity::class.java).flattenToString()))
+  }
+
+  @Test fun builtInLaunchKeepsItsExistingSeparateTaskAndMemolyLocked() {
+    val notesDecoy = alternate.copy(component = ScreenLockDecoyLauncher.BUILT_IN_NOTES)
+    ScreenLockPreferences.update(application) { it.copy(decoy = notesDecoy) }
+    val host = Robolectric.buildActivity(HostActivity::class.java).setup().get()
+    val protectedTask = task(application.packageName)
+    val notesTask = task(application.packageName, DecoyNotesActivity::class.java.name)
+    host.taskManager = mockk<ActivityManager> { every { appTasks } returns listOf(protectedTask, notesTask) }
+    val generation = ScreenLockController.authenticationGeneration()
+
+    assertTrue(ScreenLockDecoyLauncher.launch(host, ScreenLockPinStore.Result.Decoy(notesDecoy.component, notesDecoy.alias), generation))
+
+    assertEquals(ComponentName(application, DecoyNotesActivity::class.java), shadowOf(host).nextStartedActivity.component)
+    verify(exactly = 1) { protectedTask.finishAndRemoveTask() }
+    verify(exactly = 0) { notesTask.finishAndRemoveTask() }
+    assertFalse(ScreenLockController.isAccessAllowed())
+    assertFalse(ScreenLockController.completeAuthentication(generation))
   }
 }

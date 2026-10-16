@@ -9974,4 +9974,21 @@
     <string name="RecoveryKeyWarningDialog__dont_share">Don\'t share</string>
 
     <!-- EOF -->
+    <string name="decoy_notes_title">Notes</string>
+    <string name="decoy_notes_target">Built-in notepad</string>
+    <string name="decoy_notes_new">New note</string>
+    <string name="decoy_notes_back">List</string>
+    <string name="decoy_notes_delete">Delete</string>
+    <string name="decoy_notes_empty">No notes yet. Tap New note to begin.</string>
+    <string name="decoy_notes_title_hint">Title</string>
+    <string name="decoy_notes_body_hint">Write a note…</string>
+    <string name="decoy_notes_untitled">Untitled</string>
+    <string name="decoy_notes_autosave">Changes are saved automatically.</string>
+    <string name="decoy_notes_loading">Loading notes…</string>
+    <string name="decoy_notes_saving">Saving…</string>
+    <string name="decoy_notes_saved">Saved</string>
+    <string name="decoy_notes_load_failed">Could not load notes. Close and try again.</string>
+    <string name="decoy_notes_save_failed">Could not save. Your edits are still here; try again.</string>
+    <string name="decoy_notes_delete_confirm">Delete this note?</string>
+    <string name="decoy_notes_limit">You can save up to 100 notes. Delete a note to add another.</string>
 </resources>

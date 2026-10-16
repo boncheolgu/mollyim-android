@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/decoy_notes_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="?attr/colorSurface"
+    android:saveEnabled="false"
+    tools:viewBindingIgnore="true">
+
+  <LinearLayout
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:gravity="center_vertical"
+      android:orientation="horizontal">
+    <TextView
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="@string/decoy_notes_title"
+        android:textAppearance="?android:attr/textAppearanceLarge" />
+    <Button android:id="@+id/decoy_notes_new"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="@string/decoy_notes_new" />
+    <Button android:id="@+id/decoy_notes_back"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="@string/decoy_notes_back" android:visibility="gone" />
+    <Button android:id="@+id/decoy_notes_delete"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="@string/decoy_notes_delete" android:visibility="gone" />
+  </LinearLayout>
+
+  <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+    <ListView android:id="@+id/decoy_notes_list"
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:saveEnabled="false" />
+    <TextView android:id="@+id/decoy_notes_empty"
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:gravity="center" android:text="@string/decoy_notes_empty"
+        android:visibility="gone" />
+    <LinearLayout android:id="@+id/decoy_notes_editor"
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:orientation="vertical" android:visibility="gone">
+      <EditText android:id="@+id/decoy_notes_title_input"
+          android:layout_width="match_parent" android:layout_height="wrap_content"
+          android:hint="@string/decoy_notes_title_hint" android:inputType="textCapSentences"
+          android:singleLine="true" android:saveEnabled="false"
+          android:importantForAutofill="no" android:imeOptions="flagNoPersonalizedLearning" />
+      <EditText android:id="@+id/decoy_notes_body_input"
+          android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+          android:hint="@string/decoy_notes_body_hint" android:inputType="textMultiLine|textCapSentences"
+          android:gravity="top|start" android:scrollbars="vertical" android:saveEnabled="false"
+          android:importantForAutofill="no" android:imeOptions="flagNoPersonalizedLearning" />
+    </LinearLayout>
+  </FrameLayout>
+
+  <TextView android:id="@+id/decoy_notes_status"
+      android:layout_width="match_parent" android:layout_height="wrap_content"
+      android:accessibilityLiveRegion="polite" />
+</LinearLayout>

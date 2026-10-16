@@ -9,13 +9,18 @@ import android.content.pm.PackageManager
 import android.widget.Toast
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.ScreenLockController
+import org.thoughtcrime.securesms.decoynotes.DecoyNotesActivity
 
-/** Only launches a user-selected launcher entry; never grants access to Memoly. */
+/** Launches the independent notepad or a selected external entry; never grants access to chats. */
 internal object ScreenLockDecoyLauncher {
+  const val BUILT_IN_NOTES = "memoly:notes"
   data class Target(val component: String, val label: String)
 
   @Suppress("DEPRECATION")
-  fun targets(context: Context): List<Target> = try {
+  fun targets(context: Context): List<Target> = listOf(Target(BUILT_IN_NOTES, context.getString(R.string.decoy_notes_target))) + externalTargets(context)
+
+  @Suppress("DEPRECATION")
+  private fun externalTargets(context: Context): List<Target> = try {
     context.packageManager.queryIntentActivities(launcherIntent(), 0)
       .filter { usable(context, it.activityInfo) }
       .map { Target(ComponentName(it.activityInfo.packageName, it.activityInfo.name).flattenToString(), it.loadLabel(context.packageManager).toString()) }
@@ -24,7 +29,7 @@ internal object ScreenLockDecoyLauncher {
   } catch (_: RuntimeException) { emptyList() }
 
   fun label(context: Context, value: String): String = try {
-    ComponentName.unflattenFromString(value)?.let {
+    if (value == BUILT_IN_NOTES) context.getString(R.string.decoy_notes_target) else ComponentName.unflattenFromString(value)?.let {
       @Suppress("DEPRECATION")
       context.packageManager.getActivityInfo(it, 0).loadLabel(context.packageManager).toString()
     } ?: value
@@ -36,7 +41,8 @@ internal object ScreenLockDecoyLauncher {
   @Suppress("DEPRECATION")
   private fun resolve(context: Context, value: String): Intent? = try {
     val component = ComponentName.unflattenFromString(value)
-    if (component == null || component.packageName == context.packageName) null
+    if (value == BUILT_IN_NOTES) Intent(context, DecoyNotesActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+    else if (component == null || component.packageName == context.packageName) null
     else context.packageManager.queryIntentActivities(launcherIntent().setPackage(component.packageName), 0)
       .firstOrNull { ComponentName(it.activityInfo.packageName, it.activityInfo.name) == component && usable(context, it.activityInfo) }
       ?.let { launcherIntent().setComponent(component).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED) }
@@ -67,7 +73,8 @@ internal object ScreenLockDecoyLauncher {
       tasks.forEach { task ->
         try {
           // Do not remove a foreign caller's task if it contains one of our activities.
-          if (task.taskInfo.baseIntent.component?.packageName == activity.packageName) task.finishAndRemoveTask()
+          val root = task.taskInfo.baseIntent.component
+          if (root?.packageName == activity.packageName && root != ComponentName(activity, DecoyNotesActivity::class.java)) task.finishAndRemoveTask()
         } catch (_: RuntimeException) { /* Finish our live activities below as a fallback. */ }
       }
       if (!activity.isFinishing && activity.isTaskRoot && activity.intent?.component?.packageName == activity.packageName) {

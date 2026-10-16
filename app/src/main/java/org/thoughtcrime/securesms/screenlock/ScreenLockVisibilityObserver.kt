@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat
 import org.thoughtcrime.securesms.ScreenLockController
 import org.thoughtcrime.securesms.BaseActivity
 import org.thoughtcrime.securesms.DummyActivity
+import org.thoughtcrime.securesms.decoynotes.DecoyNotesActivity
 import java.util.Collections
 import java.util.IdentityHashMap
 
@@ -38,6 +39,7 @@ internal class ScreenLockVisibilityObserver(private val application: Application
   }
 
   fun starting(activity: Activity) {
+    if (activity is DecoyNotesActivity) return
     creating(activity)
     visible.add(activity)
     hasVisibleActivities = true
@@ -45,12 +47,16 @@ internal class ScreenLockVisibilityObserver(private val application: Application
   }
 
   private fun resuming(activity: Activity) {
+    if (activity is DecoyNotesActivity) return
     creating(activity)
     if (activity !is BaseActivity || activity.useScreenLock()) ScreenLockController.onActivityResuming()
     if (activity !is BaseActivity) protectWindow(activity)
   }
 
   fun creating(activity: Activity) {
+    // This final, non-exported activity contains only independent decoy notes.
+    // It must never count as a protected task or as an authenticated foreground.
+    if (activity is DecoyNotesActivity) return
     created.add(activity)
     // The task-removal workaround has no UI and must not become the tracked app task.
     if (activity is DummyActivity || activity.isFinishing || activity.isDestroyed) return
@@ -120,6 +126,7 @@ internal class ScreenLockVisibilityObserver(private val application: Application
 
   override fun onActivityStarted(activity: Activity) = starting(activity)
   override fun onActivityResumed(activity: Activity) {
+    if (activity is DecoyNotesActivity) return
     resuming(activity)
     if (activity !is BaseActivity && !ScreenLockController.isAccessAllowed() && !activity.isFinishing) {
       activity.startActivity(Intent(activity, ScreenLockGateActivity::class.java))
@@ -128,6 +135,7 @@ internal class ScreenLockVisibilityObserver(private val application: Application
   override fun onActivityStopped(activity: Activity) = stopping(activity)
   override fun onActivityDestroyed(activity: Activity) { stopping(activity); guardedWindows.remove(activity); created.remove(activity) }
   override fun onActivityCreated(activity: Activity, state: Bundle?) {
+    if (activity is DecoyNotesActivity) return
     creating(activity)
     if (activity !is BaseActivity) protectWindow(activity)
   }
