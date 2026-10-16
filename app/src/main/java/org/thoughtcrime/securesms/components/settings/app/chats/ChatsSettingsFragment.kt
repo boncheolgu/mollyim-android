@@ -3,14 +3,28 @@ package org.thoughtcrime.securesms.components.settings.app.chats
 import android.net.Uri
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
@@ -29,6 +43,7 @@ import org.thoughtcrime.securesms.backup.isIdle
 import org.thoughtcrime.securesms.backup.v2.ui.status.BackupCreationProgressRow
 import org.thoughtcrime.securesms.components.compose.rememberBiometricsAuthentication
 import org.thoughtcrime.securesms.compose.rememberStatusBarColorNestedScrollModifier
+import org.thoughtcrime.securesms.keyvalue.SettingsValues
 import org.thoughtcrime.securesms.keyvalue.protos.LocalBackupCreationProgress
 import org.thoughtcrime.securesms.util.navigation.safeNavigate
 
@@ -89,6 +104,10 @@ class ChatsSettingsFragment : ComposeFragment() {
       viewModel.setEnterKeySends(enabled)
     }
 
+    override fun onRecentStickerLimitChanged(limit: Int) {
+      viewModel.setRecentStickerLimit(limit)
+    }
+
     override fun onExportPlaintextChatHistoryClick() {
       viewModel.requestChatExportType()
     }
@@ -128,6 +147,7 @@ private interface ChatsSettingsCallbacks : ChatExportCallbacks {
   fun onAddOrEditFoldersClick() = Unit
   fun onUseSystemEmojiChanged(enabled: Boolean) = Unit
   fun onEnterKeySendsChanged(enabled: Boolean) = Unit
+  fun onRecentStickerLimitChanged(limit: Int) = Unit
   fun onExportPlaintextChatHistoryClick() = Unit
   fun onCancelInFlightExport() = Unit
 
@@ -141,6 +161,7 @@ private fun ChatsSettingsScreen(
 ) {
   val coroutineScope = rememberCoroutineScope()
   val snackbarHostState = remember { SnackbarHostState() }
+  var showRecentStickerLimitDialog by rememberSaveable { mutableStateOf(false) }
   val authenticationFailedMessage = stringResource(R.string.ChatsSettingsFragment__authentication_failed)
   val plaintextBiometricsAuthentication = rememberBiometricsAuthentication(
     promptTitle = stringResource(R.string.ChatsSettingsFragment__unlock_to_export_chat_history),
@@ -276,7 +297,27 @@ private fun ChatsSettingsScreen(
           onCheckChanged = callbacks::onEnterKeySendsChanged
         )
       }
+
+      item {
+        Rows.TextRow(
+          text = stringResource(R.string.ChatsSettingsFragment__recent_sticker_limit),
+          label = stringResource(R.string.ChatsSettingsFragment__recent_sticker_count, state.recentStickerLimit),
+          enabled = state.isRegisteredAndUpToDate(),
+          onClick = { showRecentStickerLimitDialog = true }
+        )
+      }
     }
+  }
+
+  if (showRecentStickerLimitDialog) {
+    RecentStickerLimitDialog(
+      currentLimit = state.recentStickerLimit,
+      onConfirm = {
+        callbacks.onRecentStickerLimitChanged(it)
+        showRecentStickerLimitDialog = false
+      },
+      onDismiss = { showRecentStickerLimitDialog = false }
+    )
   }
 
   if (state.isPlaintextExportEnabled) {
@@ -285,6 +326,49 @@ private fun ChatsSettingsScreen(
       callbacks = callbacks
     )
   }
+}
+
+@Composable
+private fun RecentStickerLimitDialog(currentLimit: Int, onConfirm: (Int) -> Unit, onDismiss: () -> Unit) {
+  var input by rememberSaveable { mutableStateOf(currentLimit.toString()) }
+  val limit = input.trim().toIntOrNull()?.takeIf { SettingsValues.isValidRecentStickerLimit(it) }
+  val focusRequester = remember { FocusRequester() }
+
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = { Text(stringResource(R.string.ChatsSettingsFragment__recent_sticker_limit)) },
+    text = {
+      OutlinedTextField(
+        value = input,
+        onValueChange = { input = it },
+        modifier = Modifier.focusRequester(focusRequester),
+        singleLine = true,
+        label = { Text(stringResource(R.string.ChatsSettingsFragment__recent_sticker_limit)) },
+        supportingText = {
+          Text(
+            stringResource(
+              R.string.ChatsSettingsFragment__recent_sticker_range,
+              SettingsValues.MIN_RECENT_STICKER_LIMIT,
+              SettingsValues.MAX_RECENT_STICKER_LIMIT
+            )
+          )
+        },
+        isError = limit == null,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { limit?.let(onConfirm) })
+      )
+    },
+    confirmButton = {
+      TextButton(enabled = limit != null, onClick = { limit?.let(onConfirm) }) {
+        Text(stringResource(android.R.string.ok))
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
+    }
+  )
+
+  LaunchedEffect(Unit) { focusRequester.requestFocus() }
 }
 
 @DayNightPreviews

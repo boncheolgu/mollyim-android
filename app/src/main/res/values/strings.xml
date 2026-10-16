@@ -9991,4 +9991,7 @@
     <string name="decoy_notes_save_failed">Could not save. Your edits are still here; try again.</string>
     <string name="decoy_notes_delete_confirm">Delete this note?</string>
     <string name="decoy_notes_limit">You can save up to 100 notes. Delete a note to add another.</string>
+    <string name="ChatsSettingsFragment__recent_sticker_limit">Recent sticker limit</string>
+    <string name="ChatsSettingsFragment__recent_sticker_count">Maximum: %1$d</string>
+    <string name="ChatsSettingsFragment__recent_sticker_range">Enter a whole number from %1$d to %2$d.</string>
 </resources>

@@ -32,6 +32,7 @@ class ChatsSettingsViewModel @JvmOverloads constructor(
       keepMutedChatsArchived = SignalStore.settings.shouldKeepMutedChatsArchived(),
       useSystemEmoji = SignalStore.settings.isPreferSystemEmoji,
       enterKeySends = SignalStore.settings.isEnterKeySends,
+      recentStickerLimit = SignalStore.settings.recentStickerLimit,
       localBackupsEnabled = SignalStore.settings.isBackupEnabled && BackupUtil.canUserAccessBackupDirectory(AppDependencies.application),
       folderCount = 0,
       userUnregistered = TextSecurePreferences.isUnauthorizedReceived(AppDependencies.application) || !SignalStore.account.isRegistered,
@@ -111,6 +112,11 @@ class ChatsSettingsViewModel @JvmOverloads constructor(
     SignalStore.settings.isEnterKeySends = enabled
   }
 
+  fun setRecentStickerLimit(limit: Int) {
+    SignalStore.settings.recentStickerLimit = limit
+    store.update { it.copy(recentStickerLimit = limit) }
+  }
+
   fun refresh() {
     viewModelScope.launch(Dispatchers.IO) {
       val count = ChatFoldersRepository.getFolderCount()
@@ -120,13 +126,15 @@ class ChatsSettingsViewModel @JvmOverloads constructor(
         store.update {
           it.copy(
             folderCount = count,
+            recentStickerLimit = SignalStore.settings.recentStickerLimit,
             localBackupsEnabled = backupsEnabled
           )
         }
       } else {
         store.update {
           it.copy(
-            folderCount = count
+            folderCount = count,
+            recentStickerLimit = SignalStore.settings.recentStickerLimit
           )
         }
       }
