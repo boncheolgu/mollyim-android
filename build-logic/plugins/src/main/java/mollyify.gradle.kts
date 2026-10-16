@@ -51,11 +51,11 @@ private object XmlRes {
 
 
 /**
- * Updates all translation files by replacing Signal references with Molly.
+ * Updates all translation files with the Memoly app name, preserving upstream notices.
  * Only processes strings marked with `mollyify="true"` attribute.
  */
 tasks.register("updateTranslationsAll") {
-  group = "Molly"
+  group = "Memoly"
   description = "Updates translations in all modules."
 
   subprojects.forEach { module ->
@@ -77,8 +77,8 @@ private fun Project.registerTranslationsTask(baseStringsFile: File): TaskProvide
   val rootDirProvider = provider { rootProject.rootDir }
 
   val task = tasks.register("updateTranslations") {
-    group = "Molly"
-    description = "Updates references to 'Signal' with 'Molly' in translation files."
+    group = "Memoly"
+    description = "Updates app-name references in translation files to Memoly."
 
     inputs.file(baseFileProvider)
       .withPropertyName("baseStringsFile")
@@ -106,11 +106,26 @@ private fun Project.registerTranslationsTask(baseStringsFile: File): TaskProvide
         logger.error("No translation files found in src/main/res/values-*/")
       }
 
-      fun replaceSignalRefs(elem: Element): Boolean {
+      val upstreamNotices = setOf(
+        "HelpFragment__copyright_signal_messenger",
+        "preferences__donate_to_signal",
+        "DonateMegaphone_molly_is_free_software",
+        "DonateMegaphone_we_maintain_molly_with_your_support_consider_donating_at_open_collective",
+        "RegistrationActivity_contact_signal_support"
+      )
+      val appBrand = """(?<![A-Za-z0-9_./@-])Molly(?![A-Za-z0-9_]|\.im\b)""".toRegex(RegexOption.IGNORE_CASE)
+
+      fun replaceSignalRefs(elem: Element, upstreamNotice: Boolean): Boolean {
         val oldContent = elem.textContent
-        elem.textContent = elem.textContent
+        val updated = elem.textContent
           .replace("signal.org", "molly.im")
-          .replace("Signal", "Molly")
+          .replace("Signal", if (upstreamNotice) "Molly" else "Memoly")
+        elem.textContent = if (upstreamNotice) updated else appBrand.replace(updated, "Memoly")
+          .replace("몰리(?!소켓)".toRegex(), "Memoly")
+          .replace("Memoly이", "Memoly가")
+          .replace("Memoly은", "Memoly는")
+          .replace("Memoly을", "Memoly를")
+          .replace("Memoly으로", "Memoly로")
         return oldContent != elem.textContent
       }
 
@@ -123,14 +138,14 @@ private fun Project.registerTranslationsTask(baseStringsFile: File): TaskProvide
           if (name in mollyifyList) {
             when (elem.tagName) {
               "string" -> {
-                if (replaceSignalRefs(elem)) updated = true
+                if (replaceSignalRefs(elem, name in upstreamNotices)) updated = true
               }
 
               "plurals" -> {
                 val items = elem.getElementsByTagName("item")
                 for (i in 0 until items.length) {
                   val item = items.item(i) as Element
-                  if (replaceSignalRefs(item)) updated = true
+                  if (replaceSignalRefs(item, name in upstreamNotices)) updated = true
                 }
               }
             }

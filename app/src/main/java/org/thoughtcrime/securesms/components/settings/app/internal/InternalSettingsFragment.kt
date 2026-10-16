@@ -402,7 +402,7 @@ class InternalSettingsFragment : DSLSettingsFragment(R.string.preferences__inter
 
       clickPref(
         title = DSLSettingsText.from("Delete UnifiedPush ping"),
-        summary = DSLSettingsText.from("Make as Molly never received the ping from MollySocket. Will cause UnifiedPush to stop and Websocket to restart."),
+        summary = DSLSettingsText.from("Make as Memoly never received the ping from MollySocket. Will cause UnifiedPush to stop and Websocket to restart."),
         onClick = {
           MaterialAlertDialogBuilder(requireContext())
             .setTitle("Delete UnifiedPush ping?")
