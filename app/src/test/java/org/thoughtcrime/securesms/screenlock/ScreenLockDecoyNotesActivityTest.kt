@@ -42,6 +42,8 @@ class ScreenLockDecoyNotesActivityTest {
   @Before fun setUp() {
     clearPreferenceCache()
     application = RuntimeEnvironment.getApplication()
+    // Config.NONE omits the AndroidX merged-manifest permission used below API 33.
+    shadowOf(application).grantPermissions("${application.packageName}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION")
     listOf("decoy-notes.json", "decoy-notes.json.bak", "decoy-notes.json.new").forEach { File(application.noBackupFilesDir, it).delete() }
     File(application.noBackupFilesDir, "screen-lock-mode").writeText("OFF")
     KeyCachingService.clearMasterSecret()
