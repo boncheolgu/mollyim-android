@@ -67,6 +67,9 @@ class ScreenLockDecoyNotesActivityTest {
   }
 
   private fun drainStorage() {
+    // AlertDialog posts its button listener to the main queue; dispatch it before
+    // waiting for IO, then dispatch the completion posted back by that IO task.
+    shadowOf(Looper.getMainLooper()).idle()
     DecoyNotesStore.io.submit {}.get(10, TimeUnit.SECONDS)
     shadowOf(Looper.getMainLooper()).idle()
   }
