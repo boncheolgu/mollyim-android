@@ -43,6 +43,7 @@ public abstract class BaseActivity extends AppCompatActivity {
 
   private boolean lockScreenState;
   private boolean screenLockPromptLaunched;
+  private boolean screenLockDecoyExiting;
   private final ArrayDeque<Runnable> pendingScreenLockActions = new ArrayDeque<>();
 
   @Override
@@ -115,6 +116,21 @@ public abstract class BaseActivity extends AppCompatActivity {
   protected final void clearPendingScreenLockActions() {
     pendingScreenLockActions.clear();
   }
+
+  public final void onScreenLockDecoyExit() {
+    screenLockDecoyExiting = true;
+    onPrepareScreenLockDecoyExit();
+    clearPendingScreenLockActions();
+    ScreenLockController.hideProtectedWindow(getWindow());
+    ScreenLockPinDialogFragment.cancelAuthentication(this);
+    BiometricDialogFragment.cancelAuthentication(this);
+  }
+
+  protected final boolean isScreenLockDecoyExiting() {
+    return screenLockDecoyExiting;
+  }
+
+  protected void onPrepareScreenLockDecoyExit() {}
 
   /** Authentication/initialization screens may expose only guarded support actions. */
   protected final void authenticateScreenLockAction(Runnable action) {
@@ -215,6 +231,7 @@ public abstract class BaseActivity extends AppCompatActivity {
   }
 
   private void showScreenLockPrompt(boolean fullScreen) {
+    if (screenLockDecoyExiting) return;
     if (screenLockPromptLaunched && ScreenLockPreferences.getMode(this) != ScreenLockMode.PIN) {
       return;
     }
@@ -223,7 +240,7 @@ public abstract class BaseActivity extends AppCompatActivity {
 
     final long generation = ScreenLockController.authenticationGeneration();
     screenLockPromptLaunched = true;
-    ScreenLockAuthentication.authenticate(
+    ScreenLockAuthentication.authenticateForUnlock(
         this,
         new BiometricDialogFragment.Listener() {
           @Override

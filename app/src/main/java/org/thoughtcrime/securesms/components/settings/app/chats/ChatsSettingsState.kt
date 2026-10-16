@@ -1,6 +1,7 @@
 package org.thoughtcrime.securesms.components.settings.app.chats
 
 import org.thoughtcrime.securesms.backup.LocalExportProgress
+import org.thoughtcrime.securesms.keyvalue.SettingsValues
 import org.thoughtcrime.securesms.keyvalue.protos.LocalBackupCreationProgress
 
 data class ChatsSettingsState(
@@ -16,7 +17,8 @@ data class ChatsSettingsState(
   val isPlaintextExportEnabled: Boolean,
   val plaintextExportProgress: LocalBackupCreationProgress = LocalExportProgress.plaintextProgress.value,
   val chatExportState: ChatExportState = ChatExportState.None,
-  val includeMediaInExport: Boolean = false
+  val includeMediaInExport: Boolean = false,
+  val recentStickerLimit: Int = SettingsValues.DEFAULT_RECENT_STICKER_LIMIT
 ) {
   fun isRegisteredAndUpToDate(): Boolean {
     return !userUnregistered && !clientDeprecated

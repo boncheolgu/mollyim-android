@@ -10,6 +10,7 @@ XML = '''<manifest xmlns:android="http://schemas.android.com/apk/res/android" pa
 <permission android:name="im.memoly.app.ACCESS_SECRETS" android:protectionLevel="signature"/>
 <application android:name="org.thoughtcrime.securesms.ApplicationContext">
 <provider android:authorities="im.memoly.app.fileprovider"/>
+<activity android:name="org.thoughtcrime.securesms.decoynotes.DecoyNotesActivity" android:exported="false" android:taskAffinity="im.memoly.app.decoy.notes" android:launchMode="singleTask" android:excludeFromRecents="true"/>
 <activity-alias android:name="org.thoughtcrime.securesms.RoutingActivity" android:targetActivity="org.thoughtcrime.securesms.MainActivity"/>
 </application></manifest>'''
 
@@ -34,6 +35,19 @@ class ManifestTest(unittest.TestCase):
     def test_weakened_secret_permission_is_rejected(self):
         with self.assertRaises(ValueError):
             manifest.verify(XML.replace('protectionLevel="signature"', 'protectionLevel="normal"'))
+
+    def test_notes_must_remain_private_and_separate(self):
+        replacements = [('exported="false"', 'exported="true"'),
+                        ('im.memoly.app.decoy.notes', 'im.memoly.app'),
+                        ('launchMode="singleTask"', 'launchMode="standard"'),
+                        ('excludeFromRecents="true"', 'excludeFromRecents="false"')]
+        for old, new in replacements:
+            with self.subTest(change=new), self.assertRaises(ValueError):
+                manifest.verify(XML.replace(old, new))
+
+    def test_notes_cannot_be_exposed_by_alias(self):
+        with self.assertRaises(ValueError):
+            manifest.verify(XML.replace('</application>', '<activity-alias android:name="Notes" android:targetActivity="org.thoughtcrime.securesms.decoynotes.DecoyNotesActivity"/></application>'))
 
 
 if __name__ == '__main__':

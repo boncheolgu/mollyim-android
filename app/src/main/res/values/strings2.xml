@@ -196,4 +196,18 @@
     <string name="screen_lock_pin_unavailable">The PIN or its device key could not be read. Memoly remains locked.</string>
     <string name="screen_lock_pin_wait">Too many attempts. Try again in %1$d seconds.</string>
     <string name="screen_lock_device_only">Your Memoly PIN stays on this device. Set it up again after restoring a backup on another device.</string>
+    <string name="screen_lock_decoy_pin">Decoy PIN</string>
+    <string name="screen_lock_decoy_off">Not set</string>
+    <string name="screen_lock_decoy_summary">Opens %1$s while Memoly stays locked, then removes Memoly tasks from Recents.</string>
+    <string name="screen_lock_decoy_change">Change decoy PIN and app</string>
+    <string name="screen_lock_decoy_remove">Remove decoy PIN</string>
+    <string name="screen_lock_decoy_choose_app">Choose app to open</string>
+    <string name="screen_lock_decoy_no_apps">No other launchable apps are available.</string>
+    <string name="screen_lock_decoy_new_pin">Set a decoy PIN</string>
+    <string name="screen_lock_decoy_confirm_pin">Confirm your decoy PIN</string>
+    <string name="screen_lock_decoy_setup_description">Use 4–16 digits, different from your Memoly PIN. Entering this PIN on the lock screen opens your chosen app and removes Memoly tasks from Recents. Memoly stays locked. This does not hide its installation or notifications.</string>
+    <string name="screen_lock_decoy_same_pin">Use a PIN different from your Memoly PIN.</string>
+    <string name="screen_lock_decoy_launch_failed">The selected app could not be opened. Memoly remains locked.</string>
+    <string name="screen_lock_decoy_update_failed">Could not update the decoy PIN. Try again.</string>
+    <string name="screen_lock_decoy_reset_on_pin_change">Changing your Memoly PIN also removes the decoy PIN.</string>
 </resources>

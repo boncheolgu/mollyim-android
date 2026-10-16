@@ -87,4 +87,25 @@ class ScreenLockPinDialogFragmentTest {
     assertEquals("", input.text.toString())
     controller.pause().stop().destroy()
   }
+
+  private fun listener() = object : BiometricDialogFragment.Listener {
+    override fun onSuccess() = true
+    override fun onError(message: CharSequence) = true
+  }
+
+  @Test fun fullscreenSensitiveActionConfirmationStillRequiresTheNormalPin() {
+    val controller = Robolectric.buildActivity(HostActivity::class.java).setup()
+    ScreenLockAuthentication.authenticate(controller.get(), listener(), true)
+    val fragment = controller.get().supportFragmentManager.fragments.filterIsInstance<ScreenLockPinDialogFragment>().single()
+    assertFalse(fragment.requireArguments().getBoolean("allow-decoy"))
+    controller.pause().stop().destroy()
+  }
+
+  @Test fun onlyTheExplicitAppUnlockEntryEnablesAlternatePinRouting() {
+    val controller = Robolectric.buildActivity(HostActivity::class.java).setup()
+    ScreenLockAuthentication.authenticateForUnlock(controller.get(), listener(), false)
+    val fragment = controller.get().supportFragmentManager.fragments.filterIsInstance<ScreenLockPinDialogFragment>().single()
+    assertTrue(fragment.requireArguments().getBoolean("allow-decoy"))
+    controller.pause().stop().destroy()
+  }
 }

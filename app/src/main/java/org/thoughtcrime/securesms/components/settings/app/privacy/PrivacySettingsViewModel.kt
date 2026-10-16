@@ -102,6 +102,7 @@ class PrivacySettingsViewModel(
       passphraseLockTimeout = TextSecurePreferences.getPassphraseLockTimeout(application),
       screenLockMode = ScreenLockPreferences.getMode(application),
       screenLockTimeout = ScreenLockPreferences.getTimeoutSeconds(application),
+      screenLockDecoyTarget = ScreenLockPreferences.getDecoyTarget(application),
       screenSecurity = TextSecurePreferences.isScreenSecurityEnabled(application),
       incognitoKeyboard = TextSecurePreferences.isIncognitoKeyboardEnabled(application),
       universalExpireTimer = SignalStore.settings.universalExpireTimer

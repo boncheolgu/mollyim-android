@@ -12,6 +12,7 @@ data class PrivacySettingsState(
   val passphraseLockTimeout: Long,
   val screenLockMode: ScreenLockMode,
   val screenLockTimeout: Long,
+  val screenLockDecoyTarget: String?,
   val screenSecurity: Boolean,
   val incognitoKeyboard: Boolean,
   val universalExpireTimer: Int

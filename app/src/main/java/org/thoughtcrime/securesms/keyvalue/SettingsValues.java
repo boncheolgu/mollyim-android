@@ -45,6 +45,7 @@ public final class SettingsValues extends SignalStoreValues {
   public static final  String LANGUAGE                                = "settings.language";
   public static final  String PREFER_SYSTEM_EMOJI                     = "settings.use.system.emoji";
   public static final  String ENTER_KEY_SENDS                         = "settings.enter.key.sends";
+  public static final  String RECENT_STICKER_LIMIT                    = "settings.recent.sticker.limit";
   public static final  String BACKUPS_ENABLED                         = "settings.backups.enabled";
   public static final  String BACKUPS_SCHEDULE_HOUR                   = "settings.backups.schedule.hour";
   public static final  String BACKUPS_SCHEDULE_MINUTE                 = "settings.backups.schedule.minute";
@@ -76,6 +77,10 @@ public final class SettingsValues extends SignalStoreValues {
 
   public static final int BACKUP_DEFAULT_HOUR   = 2;
   public static final int BACKUP_DEFAULT_MINUTE = 0;
+
+  public static final int DEFAULT_RECENT_STICKER_LIMIT = 24;
+  public static final int MIN_RECENT_STICKER_LIMIT = 1;
+  public static final int MAX_RECENT_STICKER_LIMIT = 1000;
 
   private final SingleLiveEvent<String> onConfigurationSettingChanged = new SingleLiveEvent<>();
 
@@ -123,6 +128,7 @@ public final class SettingsValues extends SignalStoreValues {
                          MESSAGE_FONT_SIZE,
                          PREFER_SYSTEM_EMOJI,
                          ENTER_KEY_SENDS,
+                         RECENT_STICKER_LIMIT,
                          BACKUPS_ENABLED,
                          MESSAGE_NOTIFICATIONS_ENABLED,
                          MESSAGE_NOTIFICATION_SOUND,
@@ -304,6 +310,22 @@ public final class SettingsValues extends SignalStoreValues {
 
   public void setEnterKeySends(boolean enterKeySends) {
     putBoolean(ENTER_KEY_SENDS, enterKeySends);
+  }
+
+  public int getRecentStickerLimit() {
+    int limit = getInteger(RECENT_STICKER_LIMIT, DEFAULT_RECENT_STICKER_LIMIT);
+    return isValidRecentStickerLimit(limit) ? limit : DEFAULT_RECENT_STICKER_LIMIT;
+  }
+
+  public void setRecentStickerLimit(int limit) {
+    if (!isValidRecentStickerLimit(limit)) {
+      throw new IllegalArgumentException("Unsupported recent sticker limit: " + limit);
+    }
+    putInteger(RECENT_STICKER_LIMIT, limit);
+  }
+
+  public static boolean isValidRecentStickerLimit(int limit) {
+    return limit >= MIN_RECENT_STICKER_LIMIT && limit <= MAX_RECENT_STICKER_LIMIT;
   }
 
   public boolean isBackupEnabled() {

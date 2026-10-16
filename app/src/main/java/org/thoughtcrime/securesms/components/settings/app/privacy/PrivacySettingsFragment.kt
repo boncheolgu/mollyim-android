@@ -15,6 +15,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.withResumed
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.thoughtcrime.securesms.BaseActivity
 import androidx.navigation.Navigation
 import androidx.navigation.fragment.NavHostFragment
@@ -51,6 +53,8 @@ import org.thoughtcrime.securesms.screenlock.ScreenLockAuthentication
 import org.thoughtcrime.securesms.screenlock.ScreenLockMode
 import org.thoughtcrime.securesms.screenlock.ScreenLockPinDialogFragment
 import org.thoughtcrime.securesms.screenlock.ScreenLockPreferences
+import org.thoughtcrime.securesms.screenlock.ScreenLockDecoyLauncher
+import org.thoughtcrime.securesms.screenlock.ScreenLockPinStore
 
 private val TAG = Log.tag(PrivacySettingsFragment::class.java)
 
@@ -264,7 +268,15 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
       if (state.screenLockMode == ScreenLockMode.PIN) {
         clickPref(
           title = DSLSettingsText.from(R.string.screen_lock_change_pin),
+          summary = if (state.screenLockDecoyTarget != null) DSLSettingsText.from(R.string.screen_lock_decoy_reset_on_pin_change) else null,
           onClick = { authenticateCurrentLock { showPinSetup() } }
+        )
+        clickPref(
+          title = DSLSettingsText.from(R.string.screen_lock_decoy_pin),
+          summary = DSLSettingsText.from(state.screenLockDecoyTarget?.let {
+            getString(R.string.screen_lock_decoy_summary, ScreenLockDecoyLauncher.label(requireContext(), it))
+          } ?: getString(R.string.screen_lock_decoy_off)),
+          onClick = { authenticateCurrentLock { showDecoyOptions() } }
         )
       }
 
@@ -432,6 +444,56 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
         return true
       }
     })
+  }
+
+  private fun showDecoyOptions() {
+    val generation = ScreenLockController.authenticationGeneration()
+    if (ScreenLockPreferences.getDecoyTarget(requireContext()) == null) {
+      chooseDecoyApp(generation)
+      return
+    }
+    MaterialAlertDialogBuilder(requireContext())
+      .setTitle(R.string.screen_lock_decoy_pin)
+      .setItems(arrayOf(getString(R.string.screen_lock_decoy_change), getString(R.string.screen_lock_decoy_remove))) { _, which ->
+        if (which == 0) chooseDecoyApp(generation)
+        else {
+          val application = requireContext().applicationContext
+          viewLifecycleOwner.lifecycleScope.launch {
+            val cleared = withContext(Dispatchers.IO) {
+              try { ScreenLockPinStore.clearDecoy(application, generation) } catch (_: Exception) { false }
+            }
+            if (isResumed) {
+              if (!cleared) Toast.makeText(context, R.string.screen_lock_decoy_update_failed, Toast.LENGTH_LONG).show()
+              viewModel.refresh()
+            }
+          }
+        }
+      }.setNegativeButton(android.R.string.cancel, null).show()
+  }
+
+  private fun chooseDecoyApp(generation: Long) {
+    val application = requireContext().applicationContext
+    viewLifecycleOwner.lifecycleScope.launch {
+      val targets = withContext(Dispatchers.IO) { ScreenLockDecoyLauncher.targets(application) }
+      if (!isResumed || !ScreenLockController.isCurrentAuthentication(generation) || !ScreenLockController.isAccessAllowed()) return@launch
+      if (targets.isEmpty()) {
+        Toast.makeText(context, R.string.screen_lock_decoy_no_apps, Toast.LENGTH_LONG).show()
+        return@launch
+      }
+      MaterialAlertDialogBuilder(requireContext())
+        .setTitle(R.string.screen_lock_decoy_choose_app)
+        .setItems(targets.map { "${it.label}\n${android.content.ComponentName.unflattenFromString(it.component)?.packageName}" }.toTypedArray()) { _, which ->
+          if (isResumed && ScreenLockController.isCurrentAuthentication(generation) && ScreenLockController.isAccessAllowed()) {
+            ScreenLockPinDialogFragment.showDecoySetup(requireActivity(), targets[which].component, object : BiometricDialogFragment.Listener {
+              override fun onSuccess(): Boolean { viewModel.refresh(); return true }
+              override fun onError(message: CharSequence): Boolean {
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                return true
+              }
+            })
+          }
+        }.setNegativeButton(android.R.string.cancel, null).show()
+    }
   }
 
   private fun getDeviceLockTimeoutSummary(timeoutSeconds: Long): String {

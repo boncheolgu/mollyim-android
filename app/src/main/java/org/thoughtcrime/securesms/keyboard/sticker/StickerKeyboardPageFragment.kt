@@ -17,6 +17,7 @@ import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.database.DatabaseObserver
 import org.thoughtcrime.securesms.dependencies.AppDependencies
 import org.thoughtcrime.securesms.keyboard.emoji.KeyboardPageSearchView
+import org.thoughtcrime.securesms.keyvalue.SignalStore
 import org.thoughtcrime.securesms.stickers.StickerEventListener
 import org.thoughtcrime.securesms.stickers.StickerRolloverTouchListener
 import org.thoughtcrime.securesms.stickers.StickerRolloverTouchListener.RolloverStickerRetriever
@@ -52,6 +53,7 @@ open class StickerKeyboardPageFragment :
   private val observerThrottler: Throttler = Throttler(500)
   private val stickerThrottler: Throttler = Throttler(100)
   private var firstLoad: Boolean = true
+  private var loadedRecentStickerLimit: Int? = null
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
@@ -120,7 +122,18 @@ open class StickerKeyboardPageFragment :
     viewModel.packs.observe(viewLifecycleOwner, stickerPacksAdapter::submitList)
     viewModel.getSelectedPack().observe(viewLifecycleOwner, this::updateCategoryTab)
 
+    loadedRecentStickerLimit = SignalStore.settings.recentStickerLimit
     viewModel.refreshStickers()
+  }
+
+  override fun onResume() {
+    super.onResume()
+    // Settings can change while this conversation and its keyboard are retained.
+    val limit = SignalStore.settings.recentStickerLimit
+    if (limit != loadedRecentStickerLimit) {
+      loadedRecentStickerLimit = limit
+      viewModel.refreshStickers()
+    }
   }
 
   open fun updateStickerList(stickers: MappingModelList) {

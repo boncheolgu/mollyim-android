@@ -9765,4 +9765,24 @@
     <string name="RecoveryKeyWarningDialog__dont_share">복구 키 공유하지 않기</string>
 
     <!-- EOF -->
+    <string name="decoy_notes_title">메모</string>
+    <string name="decoy_notes_target">내장 메모장</string>
+    <string name="decoy_notes_new">새 메모</string>
+    <string name="decoy_notes_back">목록</string>
+    <string name="decoy_notes_delete">삭제</string>
+    <string name="decoy_notes_empty">아직 메모가 없습니다. 새 메모를 눌러 작성하세요.</string>
+    <string name="decoy_notes_title_hint">제목</string>
+    <string name="decoy_notes_body_hint">메모를 작성하세요…</string>
+    <string name="decoy_notes_untitled">제목 없음</string>
+    <string name="decoy_notes_autosave">변경 내용은 자동으로 저장됩니다.</string>
+    <string name="decoy_notes_loading">메모를 불러오는 중…</string>
+    <string name="decoy_notes_saving">저장 중…</string>
+    <string name="decoy_notes_saved">저장됨</string>
+    <string name="decoy_notes_load_failed">메모를 불러오지 못했습니다. 닫은 후 다시 시도하세요.</string>
+    <string name="decoy_notes_save_failed">저장하지 못했습니다. 작성한 내용은 화면에 남아 있습니다. 다시 시도하세요.</string>
+    <string name="decoy_notes_delete_confirm">이 메모를 삭제할까요?</string>
+    <string name="decoy_notes_limit">메모는 최대 100개까지 저장할 수 있습니다. 기존 메모를 삭제한 후 추가하세요.</string>
+    <string name="ChatsSettingsFragment__recent_sticker_limit">최근 사용 스티커 개수</string>
+    <string name="ChatsSettingsFragment__recent_sticker_count">최대 %1$d개</string>
+    <string name="ChatsSettingsFragment__recent_sticker_range">%1$d~%2$d 사이의 정수를 입력하세요.</string>
 </resources>

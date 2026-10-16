@@ -167,4 +167,18 @@
     <string name="screen_lock_pin_unavailable">PIN 또는 기기 키를 읽을 수 없습니다. 잠금 상태가 유지됩니다.</string>
     <string name="screen_lock_pin_wait">시도 횟수를 초과했습니다. %1$d초 후 다시 시도하세요.</string>
     <string name="screen_lock_device_only">Memoly PIN은 이 기기에만 적용됩니다. 다른 기기에서 백업을 복원하면 다시 설정하세요.</string>
+    <string name="screen_lock_decoy_pin">위장 PIN</string>
+    <string name="screen_lock_decoy_off">설정 안 됨</string>
+    <string name="screen_lock_decoy_summary">Memoly 잠금을 유지한 채 %1$s 앱을 열고 Memoly 작업을 최근 앱에서 제거합니다.</string>
+    <string name="screen_lock_decoy_change">위장 PIN 및 앱 변경</string>
+    <string name="screen_lock_decoy_remove">위장 PIN 해제</string>
+    <string name="screen_lock_decoy_choose_app">실행할 앱 선택</string>
+    <string name="screen_lock_decoy_no_apps">실행 가능한 다른 앱이 없습니다.</string>
+    <string name="screen_lock_decoy_new_pin">위장 PIN 설정</string>
+    <string name="screen_lock_decoy_confirm_pin">위장 PIN 확인</string>
+    <string name="screen_lock_decoy_setup_description">Memoly PIN과 다른 숫자 4~16자리를 사용하세요. 잠금 화면에서 이 PIN을 입력하면 선택한 앱을 열고 Memoly 작업을 최근 앱에서 제거합니다. Memoly 잠금은 유지됩니다. 설치 정보나 알림까지 숨기는 기능은 아닙니다.</string>
+    <string name="screen_lock_decoy_same_pin">Memoly PIN과 다른 번호를 사용하세요.</string>
+    <string name="screen_lock_decoy_launch_failed">선택한 앱을 실행할 수 없습니다. Memoly 잠금은 유지됩니다.</string>
+    <string name="screen_lock_decoy_update_failed">위장 PIN 설정을 변경할 수 없습니다. 다시 시도하세요.</string>
+    <string name="screen_lock_decoy_reset_on_pin_change">Memoly PIN을 변경하면 위장 PIN도 해제됩니다.</string>
 </resources>

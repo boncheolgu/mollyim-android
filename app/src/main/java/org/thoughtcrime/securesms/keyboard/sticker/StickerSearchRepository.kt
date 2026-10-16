@@ -7,19 +7,19 @@ import org.thoughtcrime.securesms.database.SignalDatabase
 import org.thoughtcrime.securesms.database.StickerTable
 import org.thoughtcrime.securesms.database.StickerTable.StickerRecordReader
 import org.thoughtcrime.securesms.database.model.StickerRecord
+import org.thoughtcrime.securesms.keyvalue.SignalStore
 
-private const val RECENT_LIMIT = 24
 private const val EMOJI_SEARCH_RESULTS_LIMIT = 20
 
-class StickerSearchRepository {
-
-  private val emojiSearchTable: EmojiSearchTable = SignalDatabase.emojiSearch
+class StickerSearchRepository(
+  private val emojiSearchTable: EmojiSearchTable = SignalDatabase.emojiSearch,
   private val stickerTable: StickerTable = SignalDatabase.stickers
+) {
 
   @WorkerThread
   fun search(query: String): List<StickerRecord> {
     if (query.isEmpty()) {
-      return StickerRecordReader(stickerTable.getRecentlyUsedStickers(RECENT_LIMIT)).readAll()
+      return StickerRecordReader(stickerTable.getRecentlyUsedStickers(SignalStore.settings.recentStickerLimit)).readAll()
     }
 
     val maybeEmojiQuery: List<StickerRecord> = findStickersForEmoji(query)

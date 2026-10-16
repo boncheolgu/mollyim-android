@@ -141,6 +141,19 @@ object ScreenLockController {
     if (autoLock) clearReplyActionFromNotifications(context)
   }
 
+  @JvmStatic
+  @Synchronized
+  internal fun beginDecoyExit(context: Context, generation: Long): Boolean {
+    if (!session.isCurrent(generation) || ScreenLockPreferences.getMode(context) != ScreenLockMode.PIN) return false
+    session.end()
+    visibility?.prepareDecoyExit()
+    blankScreen()
+    clearReplyActionFromNotifications(context)
+    return true
+  }
+
+  internal fun finishDecoyExit() { visibility?.finishDecoyExit() }
+
   private fun hide(context: Context, timeout: Long) {
     session.hide(SystemClock.elapsedRealtime(), timeout)
     if (autoLock) clearReplyActionFromNotifications(context)
