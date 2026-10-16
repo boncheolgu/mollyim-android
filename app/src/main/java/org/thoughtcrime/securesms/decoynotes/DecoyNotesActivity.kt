@@ -89,7 +89,7 @@ class DecoyNotesActivity : AppCompatActivity() {
     status.setText(R.string.decoy_notes_loading)
     val restoreId = savedInstanceState?.getString("note")
     DecoyNotesStore.io.execute {
-      val result = runCatching { store.read() }
+      val result = runCatching { store.readOrInitializeSamples() }
       handler.post {
         if (isFinishing || isDestroyed) return@post
         result.onSuccess {

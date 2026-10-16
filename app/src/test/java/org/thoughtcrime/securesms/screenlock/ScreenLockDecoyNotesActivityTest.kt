@@ -100,15 +100,18 @@ class ScreenLockDecoyNotesActivityTest {
 
   @Test fun autosaveAndConfirmedDeletePersistAcrossStoreReopening() {
     val activity = notes().get()
+    val samples = DecoyNotesStore(application.noBackupFilesDir).read()
+    assertEquals(4, samples.size)
+    val sampleIds = samples.map { it.id }.toSet()
     activity.findViewById<View>(R.id.decoy_notes_new).performClick()
     activity.findViewById<EditText>(R.id.decoy_notes_body_input).setText("A useful note")
     shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
     drainStorage()
-    assertEquals("A useful note", DecoyNotesStore(application.noBackupFilesDir).read().single().body)
+    assertEquals("A useful note", DecoyNotesStore(application.noBackupFilesDir).read().single { it.id !in sampleIds }.body)
     activity.findViewById<View>(R.id.decoy_notes_delete).performClick()
     (ShadowDialog.getLatestDialog() as AlertDialog).getButton(AlertDialog.BUTTON_POSITIVE).performClick()
     drainStorage()
-    assertTrue(DecoyNotesStore(application.noBackupFilesDir).read().isEmpty())
+    assertEquals(samples, DecoyNotesStore(application.noBackupFilesDir).readOrInitializeSamples())
     assertEquals(View.GONE, activity.findViewById<View>(R.id.decoy_notes_editor).visibility)
     assertFalse(ScreenLockController.isAccessAllowed())
   }

@@ -15,6 +15,19 @@ internal class DecoyNotesStore(directory: File) {
 
   fun read(): List<Note> = synchronized(lock) { readLocked() }
 
+  fun readOrInitializeSamples(): List<Note> = synchronized(lock) {
+    // The atomic notes file is also the initialization marker. An existing empty
+    // list means the user deleted their notes and must never be populated again.
+    if (file.baseFile.exists() || File(file.baseFile.path + ".bak").exists()) {
+      readLocked()
+    } else {
+      val notes = DecoyNotesSamples.create(System.currentTimeMillis())
+      notes.forEach(::validate)
+      writeLocked(notes)
+      notes
+    }
+  }
+
   fun save(note: Note): List<Note> = synchronized(lock) {
     validate(note)
     val notes = readLocked().filterNot { it.id == note.id } + note
