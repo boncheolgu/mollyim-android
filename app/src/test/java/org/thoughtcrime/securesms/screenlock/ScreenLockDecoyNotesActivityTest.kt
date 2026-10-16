@@ -108,6 +108,21 @@ class ScreenLockDecoyNotesActivityTest {
     assertFalse(ScreenLockController.isAccessAllowed())
   }
 
+  @Test fun failedSaveKeepsTheEditorAndTextInsteadOfLeavingForTheList() {
+    val activity = notes().get()
+    activity.findViewById<View>(R.id.decoy_notes_new).performClick()
+    val body = activity.findViewById<EditText>(R.id.decoy_notes_body_input)
+    body.setText("Keep these edits")
+    val file = File(application.noBackupFilesDir, "decoy-notes.json").apply { writeText("damaged storage") }
+    activity.findViewById<View>(R.id.decoy_notes_back).performClick()
+    drainStorage()
+    assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.decoy_notes_editor).visibility)
+    assertEquals("Keep these edits", body.text.toString())
+    assertTrue(body.isEnabled)
+    assertEquals("damaged storage", file.readText())
+    assertFalse(ScreenLockController.isAccessAllowed())
+  }
+
   @Test fun onlyNotesSurviveBlankingAndDecoyExitWhileProtectedActivityIsClosed() {
     val memo = notes().get()
     val hostController = Robolectric.buildActivity(Activity::class.java).create()

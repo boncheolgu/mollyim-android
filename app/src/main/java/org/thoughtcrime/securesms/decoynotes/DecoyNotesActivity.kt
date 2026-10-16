@@ -174,10 +174,6 @@ class DecoyNotesActivity : AppCompatActivity() {
     val id = currentId ?: return
     if (!loaded || !editing || navigating || (!dirty && !leave)) return
     val note = DecoyNotesStore.Note(id, titleInput.text.toString(), bodyInput.text.toString(), System.currentTimeMillis())
-    if (note.title.isBlank() && note.body.isBlank() && notes.none { it.id == id } && !dirty) {
-      if (leave) showList()
-      return
-    }
     // Empty new drafts do not create phantom entries, but clearing an existing note is saved.
     val emptyDraft = note.title.isBlank() && note.body.isBlank() && notes.none { it.id == id }
     val savedRevision = revision
