@@ -21,11 +21,11 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.signal.core.util.concurrent.SignalDispatchers
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.ScreenLockController
 import org.thoughtcrime.securesms.biometric.BiometricDialogFragment
@@ -104,12 +104,12 @@ class ScreenLockPinDialogFragment : DialogFragment() {
       return
     }
     if (!ScreenLockController.isCurrentAuthentication(generation)) {
-      if (setup || ScreenLockPreferences.getMode(requireContext()) != ScreenLockMode.PIN) {
-        dismissAllowingStateLoss()
-        return
-      } else {
-        requireArguments().putLong(GENERATION, ScreenLockController.authenticationGeneration())
-      }
+      // A listener is bound to the same generation as the verification request.
+      // Updating only the arguments leaves its authentication callback stale.
+      cancelled = true
+      dismissAllowingStateLoss()
+      listener?.onCancel(false)
+      return
     }
     showPinKeyboard()
   }
@@ -175,7 +175,7 @@ class ScreenLockPinDialogFragment : DialogFragment() {
     work = viewLifecycleOwner.lifecycleScope.launch {
       var retry = false
       try {
-        val result = withContext(Dispatchers.IO) {
+        val result = withContext(SignalDispatchers.IO) {
           try {
             if (setup) {
               val job = currentCoroutineContext()[Job]
@@ -196,10 +196,18 @@ class ScreenLockPinDialogFragment : DialogFragment() {
           ScreenLockPinStore.Result.Success -> {
             val callback = listener
             val host = activity
-            dismissAllowingStateLoss()
-            // Commit dismissal before a settings callback opens another PIN dialog.
-            host?.window?.decorView?.post {
-              if (!host.isFinishing && !host.isDestroyed) callback?.onSuccess()
+            cancelled = true
+            if (allowDecoy && !setup) {
+              // Commit app-unlock authentication before dismissal restores host focus.
+              // Otherwise a focus/top-resume callback can launch another locked prompt.
+              callback?.onSuccess()
+              dismissAllowingStateLoss()
+            } else {
+              dismissAllowingStateLoss()
+              // Settings callbacks can open a different PIN dialog with the same tag.
+              host?.window?.decorView?.post {
+                if (!host.isFinishing && !host.isDestroyed) callback?.onSuccess()
+              }
             }
           }
           ScreenLockPinStore.Result.Incorrect -> error?.setText(R.string.screen_lock_pin_incorrect)
@@ -274,9 +282,13 @@ class ScreenLockPinDialogFragment : DialogFragment() {
     private fun show(activity: FragmentActivity, setup: Boolean, listener: BiometricDialogFragment.Listener, allowDecoy: Boolean, decoyTarget: String?) {
       val manager = activity.supportFragmentManager
       if (manager.isStateSaved) return
+      if (!setup && allowDecoy && ScreenLockController.isAccessAllowed()) {
+        listener.onCancel(false)
+        return
+      }
       val existing = manager.findFragmentByTag(TAG) as? ScreenLockPinDialogFragment
       if (existing != null) {
-        if (existing.setup != setup || existing.allowDecoy != allowDecoy || existing.decoyTarget != decoyTarget || existing.cancelled || (existing.setup && existing.generation != ScreenLockController.authenticationGeneration())) {
+        if (existing.setup != setup || existing.allowDecoy != allowDecoy || existing.decoyTarget != decoyTarget || existing.cancelled || existing.isRemoving || existing.generation != ScreenLockController.authenticationGeneration()) {
           existing.cancelled = true
           existing.work?.cancel()
           existing.dismissAllowingStateLoss()

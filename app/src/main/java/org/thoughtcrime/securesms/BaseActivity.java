@@ -14,14 +14,13 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.lifecycle.Lifecycle;
 
 import org.signal.core.util.ConfigurationUtil;
 import org.signal.core.util.ServiceUtil;
 import org.signal.core.util.logging.Log;
 import org.thoughtcrime.securesms.biometric.BiometricDialogFragment;
 import org.thoughtcrime.securesms.screenlock.ScreenLockAuthentication;
-import org.thoughtcrime.securesms.screenlock.ScreenLockMode;
-import org.thoughtcrime.securesms.screenlock.ScreenLockPreferences;
 import org.thoughtcrime.securesms.screenlock.ScreenLockPinDialogFragment;
 import org.thoughtcrime.securesms.service.KeyCachingService;
 import org.thoughtcrime.securesms.util.AppStartup;
@@ -44,6 +43,16 @@ public abstract class BaseActivity extends AppCompatActivity {
   private boolean lockScreenState;
   private boolean screenLockPromptLaunched;
   private boolean screenLockDecoyExiting;
+  private boolean topResumed;
+  private boolean screenLockPromptScheduled;
+  private final Runnable screenLockPrompt = () -> {
+    screenLockPromptScheduled = false;
+    if (!topResumed || !getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED) ||
+        isFinishing() || isDestroyed() || screenLockDecoyExiting || !useScreenLock() ||
+        getSupportFragmentManager().isStateSaved() || ScreenLockController.isAccessAllowed()) return;
+    lockScreenState = true;
+    showScreenLockPrompt(true);
+  };
   private final ArrayDeque<Runnable> pendingScreenLockActions = new ArrayDeque<>();
 
   @Override
@@ -83,14 +92,22 @@ public abstract class BaseActivity extends AppCompatActivity {
     if (Build.VERSION.SDK_INT < 29) {
       onTopResumedActivityChanged(true);
     }
+    scheduleScreenLockPrompt();
   }
 
   @Override
   public void onTopResumedActivityChanged(boolean isTopResumedActivity) {
-    boolean isTopOfTask = isTopResumedActivity && !isFinishing();
-    if (isTopOfTask && lockScreenState && useScreenLock()) {
-      showScreenLockPrompt(true);
-    }
+    topResumed = isTopResumedActivity;
+    scheduleScreenLockPrompt();
+  }
+
+  /** Window focus is not a reliable trigger: locked windows are deliberately not focusable. */
+  private void scheduleScreenLockPrompt() {
+    if (!topResumed || screenLockPromptScheduled || !getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED) ||
+        isFinishing() || isDestroyed() || screenLockDecoyExiting || !useScreenLock() || ScreenLockController.isAccessAllowed()) return;
+    screenLockPromptScheduled = true;
+    // Fragment lifecycle callbacks can still be executing a transaction here.
+    getWindow().getDecorView().post(screenLockPrompt);
   }
 
   protected void onPostResume(boolean screenLocked) {
@@ -179,6 +196,7 @@ public abstract class BaseActivity extends AppCompatActivity {
       ScreenLockController.hideProtectedWindow(getWindow());
       ScreenLockController.blankScreen();
       onWindowAttributesChanged(getWindow().getAttributes());
+      scheduleScreenLockPrompt();
     }
   }
 
@@ -195,6 +213,7 @@ public abstract class BaseActivity extends AppCompatActivity {
       else onPostResume(false);
     }
     onWindowAttributesChanged(getWindow().getAttributes());
+    scheduleScreenLockPrompt();
   }
 
   public void blockRecentAppsScreenshot(boolean block) {
@@ -231,10 +250,7 @@ public abstract class BaseActivity extends AppCompatActivity {
   }
 
   private void showScreenLockPrompt(boolean fullScreen) {
-    if (screenLockDecoyExiting) return;
-    if (screenLockPromptLaunched && ScreenLockPreferences.getMode(this) != ScreenLockMode.PIN) {
-      return;
-    }
+    if (screenLockDecoyExiting || screenLockPromptLaunched || ScreenLockController.isAccessAllowed()) return;
 
     logEvent("Prompting for screen lock: fullScreen=" + fullScreen);
 
@@ -263,6 +279,8 @@ public abstract class BaseActivity extends AppCompatActivity {
             if (fromUser) {
               logEvent("Authentication canceled from user");
               onAuthenticationCancel();
+            } else {
+              scheduleScreenLockPrompt();
             }
             return false;
           }
@@ -290,8 +308,16 @@ public abstract class BaseActivity extends AppCompatActivity {
   public void onWindowFocusChanged(boolean hasFocus) {
     super.onWindowFocusChanged(hasFocus);
     if (hasFocus && useScreenLock() && ScreenLockController.getLockScreenAtStart() && !screenLockPromptLaunched && !isFinishing()) {
-      showScreenLockPrompt(true);
+      scheduleScreenLockPrompt();
     }
+  }
+
+  @Override
+  protected void onPause() {
+    topResumed = false;
+    getWindow().getDecorView().removeCallbacks(screenLockPrompt);
+    screenLockPromptScheduled = false;
+    super.onPause();
   }
 
   @Override
