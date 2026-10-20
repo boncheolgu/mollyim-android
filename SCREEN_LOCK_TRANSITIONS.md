@@ -1,23 +1,25 @@
-# Screen-lock transition races
+# Screen-lock request and foreground recovery changes
 
-Reported on Memoly .10: a correct normal PIN sometimes leads to another PIN prompt; either incoming or outgoing calls can leave a black screen after ending, requiring an app restart.
+Reported on .10: a normal PIN sometimes needs to be entered again, and ending incoming/outgoing calls sometimes leaves a persistent black screen. The user reports not observing this with fingerprint authentication. Device trigger attribution remains unconfirmed.
 
-## Changes
+## Implementation
 
-- Commit app-unlock authentication synchronously after successful verification and before dismissing the PIN window. Keep settings/setup completion deferred until removal because those callbacks may open another dialog using the same tag.
-- Treat the verification request, generation and listener as one request. Cancel stale dialogs on resume instead of updating only their argument token, and replace stale requests with newly bound listeners. A queued app-unlock replacement must not reopen after another activity has authenticated.
-- Track the top-resumed activity and schedule a single prompt after resume, lock-state changes and protection refresh. Recheck lifecycle, top state, access and fragment state when executing. Do not depend on focus arriving at a protected window marked not focusable. Cancel queued work on pause and coalesce duplicate PIN prompts.
+- Complete app-unlock authentication before dismissing the PIN window, like the biometric callback path. Keep settings/setup callbacks deferred because they may open a different dialog under the same tag.
+- Carry the generation captured by ScreenLockAuthentication through initial PIN creation and every queued replacement. Never retarget an old guarded callback to the newest generation. Replace stale dialogs rather than mutating their saved generation, and capture the listener used by each verification job.
+- On host pause or unhandled dismissal, cancel PIN verification, dismiss its request and notify the host exactly once. A completed authentication does not subsequently report cancellation. Superseded or programmatically closed requests do not cancel a newer request.
+- Track the host prompt's generation and request ID. Coalesce duplicates of the current request while allowing an invalidated open prompt to be replaced before another PIN entry. Ignore callbacks belonging to superseded host requests.
+- Schedule prompts on real foreground/protection transitions without depending on focus at a protected non-focusable window. Check activity lifecycle, top state, FragmentManager saved state, access and session readiness before scheduling and again before execution. A background session cannot enter an immediate create/cancel/retry loop; real resume rearms prompting.
 
-No PIN verification algorithm, retry policy, decoy policy or protected-call action exception changes. Old/background verification results remain invalid. These fixes address concrete ordering defects found in code; physical-device confirmation is still needed to establish that both reported symptoms are resolved.
+PIN verification algorithm, retry limits, decoy handling, notification privacy and permitted unauthenticated call reject/end actions are unchanged. Task-removal correlation is a separate unconfirmed hypothesis and is not modified here.
 
-## .10 device reproduction attempts
+## Verification
 
-Set normal PIN mode and immediate locking. Open its PIN screen, go Home for 2–3 seconds, return and enter the correct PIN once. Separately try switching the display off/on while the PIN screen is open, unlocking the system, then entering Memoly's PIN. Repeat each path 5–10 times and record whether an additional prompt appears after the valid entry.
+Fifteen proposed Android regressions cover completion/dismissal ordering, settings confirmation, pause cancellation and recovery, stale requests, queued replacements invalidated before execution, ordinary background return, prompt invalidation while already open, and foreground/window recovery including session-background readiness. The bare BaseActivity tests simulate a return from a call; they do not place real WebRTC calls or prove the device report resolved.
 
-For both incoming and outgoing calls, try (A) ending a connected call while Memoly stays foreground and (B) going Home for 2–3 seconds, returning to the call, authenticating if required, then ending it. Speakerphone helps separate proximity-sensor blanking from a persistent app window. A chat or necessary authentication screen should appear; a persistent unresponsive black screen is a failure. Note whether Back recovers it.
+The comparison script runs the .10 PIN dialog and authentication dispatcher against the same real PIN/HMAC fixture (only Java KeyStoreHelper is faked). It requires the named forced generation-mismatch assertion to fail while the ordinary-return control passes, restores current sources, then requires all fifteen current cases to pass. The only .10 scheduling seam is routing Dispatchers.IO through the existing SignalDispatchers provider. Infrastructure failures, missing tests and unexpected baseline results fail proof. Logs and JUnit evidence are archived by the diagnostic tag workflow.
 
-## Automated coverage
+Original CI 39266420312 failed in the old PIN mock fixture before assertions, plus an uninvestigated StoryContextMenuTest initialization error. The replacement fixture follows the existing KeyStoreHelper fake pattern. The current comparison and revised Android tests still await execution. No local JDK/Android SDK is installed.
 
-Eight regressions cover authentication-before-dismissal, settings completion after dismissal, stale resumed requests, queued replacement after another unlock, return from a call when top-resume precedes resume without a focus event, lock-state changes on an already top screen, queued work after pause, and unlock before queued prompt execution. PIN verification is mocked at its existing store boundary; persistence/cryptographic/retry tests remain separate. Android tests run in CI because no local JDK/Android SDK is available.
+See SCREEN_LOCK_CAUSE_REPRO_FIX_KO.md for evidence ranking and PIN_REENTRY_ANALYSIS.md for the historical investigation. The excluded synthetic top-resume-before-postResume ordering is not used as device proof. AOSP-style resume/postResume then top-resume is a normal-return control.
 
-This branch is based on the .10 source, including the unmerged branding PR #3. Its review targets that branding branch so the fix diff remains isolated.
+This branch remains stacked on draft branding PR #3. Do not merge or publish releases as part of validation.

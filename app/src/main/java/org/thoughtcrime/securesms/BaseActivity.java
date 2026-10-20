@@ -42,6 +42,8 @@ public abstract class BaseActivity extends AppCompatActivity {
 
   private boolean lockScreenState;
   private boolean screenLockPromptLaunched;
+  private long screenLockPromptGeneration;
+  private long screenLockPromptRequestId;
   private boolean screenLockDecoyExiting;
   private boolean topResumed;
   private boolean screenLockPromptScheduled;
@@ -49,7 +51,8 @@ public abstract class BaseActivity extends AppCompatActivity {
     screenLockPromptScheduled = false;
     if (!topResumed || !getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED) ||
         isFinishing() || isDestroyed() || screenLockDecoyExiting || !useScreenLock() ||
-        getSupportFragmentManager().isStateSaved() || ScreenLockController.isAccessAllowed()) return;
+        getSupportFragmentManager().isStateSaved() || ScreenLockController.isAccessAllowed() ||
+        !ScreenLockController.isAuthenticationReady()) return;
     lockScreenState = true;
     showScreenLockPrompt(true);
   };
@@ -104,7 +107,9 @@ public abstract class BaseActivity extends AppCompatActivity {
   /** Window focus is not a reliable trigger: locked windows are deliberately not focusable. */
   private void scheduleScreenLockPrompt() {
     if (!topResumed || screenLockPromptScheduled || !getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED) ||
-        isFinishing() || isDestroyed() || screenLockDecoyExiting || !useScreenLock() || ScreenLockController.isAccessAllowed()) return;
+        isFinishing() || isDestroyed() || screenLockDecoyExiting || !useScreenLock() ||
+        getSupportFragmentManager().isStateSaved() || ScreenLockController.isAccessAllowed() ||
+        !ScreenLockController.isAuthenticationReady()) return;
     screenLockPromptScheduled = true;
     // Fragment lifecycle callbacks can still be executing a transaction here.
     getWindow().getDecorView().post(screenLockPrompt);
@@ -250,17 +255,21 @@ public abstract class BaseActivity extends AppCompatActivity {
   }
 
   private void showScreenLockPrompt(boolean fullScreen) {
-    if (screenLockDecoyExiting || screenLockPromptLaunched || ScreenLockController.isAccessAllowed()) return;
+    if (screenLockDecoyExiting || ScreenLockController.isAccessAllowed()) return;
+    final long generation = ScreenLockController.authenticationGeneration();
+    if (screenLockPromptLaunched && screenLockPromptGeneration == generation) return;
 
     logEvent("Prompting for screen lock: fullScreen=" + fullScreen);
 
-    final long generation = ScreenLockController.authenticationGeneration();
+    final long requestId = ++screenLockPromptRequestId;
+    screenLockPromptGeneration = generation;
     screenLockPromptLaunched = true;
     ScreenLockAuthentication.authenticateForUnlock(
         this,
         new BiometricDialogFragment.Listener() {
           @Override
           public boolean onSuccess() {
+            if (requestId != screenLockPromptRequestId) return true;
             screenLockPromptLaunched = false;
             if (ScreenLockController.completeAuthentication(generation) || !ScreenLockController.getLockScreenAtStart()) {
               onPostResume(false);
@@ -270,6 +279,7 @@ public abstract class BaseActivity extends AppCompatActivity {
 
           @Override
           public boolean onCancel(boolean fromUser) {
+            if (requestId != screenLockPromptRequestId) return true;
             screenLockPromptLaunched = false;
             if (!ScreenLockController.getLockScreenAtStart()) {
               logEvent("Screen already unlocked by another activity. Ignore the cancel event.");
@@ -287,6 +297,7 @@ public abstract class BaseActivity extends AppCompatActivity {
 
           @Override
           public boolean onError(@NonNull CharSequence errString) {
+            if (requestId != screenLockPromptRequestId) return true;
             screenLockPromptLaunched = false;
             Toast.makeText(BaseActivity.this, errString, Toast.LENGTH_LONG).show();
             finishAndRemoveTask();
@@ -295,6 +306,7 @@ public abstract class BaseActivity extends AppCompatActivity {
 
           @Override
           public boolean onNotEnrolled(@NonNull CharSequence errString) {
+            if (requestId != screenLockPromptRequestId) return true;
             screenLockPromptLaunched = false;
             Toast.makeText(BaseActivity.this, errString, Toast.LENGTH_LONG).show();
             onAuthenticationCancel();

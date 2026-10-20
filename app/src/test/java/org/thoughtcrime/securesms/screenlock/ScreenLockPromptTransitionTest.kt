@@ -87,15 +87,16 @@ class ScreenLockPromptTransitionTest {
 
   private fun prompts(activity: HostActivity) = activity.supportFragmentManager.fragments.filterIsInstance<ScreenLockPinDialogFragment>()
 
-  @Test fun returningFromACallPromptsEvenWhenTopResumePrecedesResumeAndNoWindowFocusArrives() {
+  @Test fun returningFromACallPromptsAfterPostResumeWithoutAWindowFocusCallback() {
     val controller = host()
     val activity = controller.get()
     controller.pause()
     ScreenLockController.onActivitiesHidden(application)
     ScreenLockController.hideProtectedWindow(activity.window)
-    // Android can report top-resume before onPostResume updates the lock state.
-    activity.onTopResumedActivityChanged(true)
+    // AOSP finishes performResume (including onPostResume) before reporting top-resume.
+    // This is a normal-return control, not proof of the reported intermittent bug.
     controller.resume().postResume()
+    activity.onTopResumedActivityChanged(true)
     shadowOf(Looper.getMainLooper()).idle()
 
     assertFalse(ScreenLockController.isAccessAllowed())
@@ -140,5 +141,54 @@ class ScreenLockPromptTransitionTest {
     assertTrue(ScreenLockController.isAccessAllowed())
     assertTrue(prompts(activity).isEmpty())
     assertEquals(View.VISIBLE, activity.findViewById<View>(android.R.id.content).visibility)
+  }
+
+  @Test fun aBackgroundSessionDoesNotLoopAndTheNextRealResumeShowsOnePrompt() {
+    val controller = host()
+    val activity = controller.get()
+    ScreenLockController.onTaskRemoved(application)
+    activity.onScreenLockStateChanged()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertFalse(ScreenLockController.isAuthenticationReady())
+    assertFalse(ScreenLockController.isAccessAllowed())
+    assertTrue(prompts(activity).isEmpty())
+
+    controller.pause().resume().postResume()
+    activity.onTopResumedActivityChanged(true)
+    shadowOf(Looper.getMainLooper()).idle()
+    assertTrue(ScreenLockController.isAuthenticationReady())
+    assertEquals(1, prompts(activity).size)
+  }
+
+  @Test fun aQueuedPromptRechecksWhetherTheSessionBecameBackground() {
+    val activity = host().get()
+    ScreenLockController.configure(application, false)
+    activity.onScreenLockStateChanged()
+    ScreenLockController.onTaskRemoved(application)
+    shadowOf(Looper.getMainLooper()).idle()
+
+    assertFalse(ScreenLockController.isAuthenticationReady())
+    assertFalse(ScreenLockController.isAccessAllowed())
+    assertTrue(prompts(activity).isEmpty())
+  }
+
+  @Test fun invalidatingAnOpenPromptReplacesItBeforeAnotherPinEntry() {
+    val activity = host().get()
+    ScreenLockController.configure(application, false)
+    activity.onScreenLockStateChanged()
+    shadowOf(Looper.getMainLooper()).idle()
+    val previous = prompts(activity).single()
+
+    ScreenLockController.configure(application, false)
+    val generation = ScreenLockController.authenticationGeneration()
+    activity.onScreenLockStateChanged()
+    shadowOf(Looper.getMainLooper()).idle()
+
+    val replacement = prompts(activity).single()
+    assertNotSame(previous, replacement)
+    assertEquals(generation, replacement.requireArguments().getLong("generation"))
+    assertTrue(replacement.requireDialog().isShowing)
+    assertFalse(ScreenLockController.isAccessAllowed())
   }
 }
