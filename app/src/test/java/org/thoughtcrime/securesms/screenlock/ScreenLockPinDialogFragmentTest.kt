@@ -73,17 +73,22 @@ class ScreenLockPinDialogFragmentTest {
     controller.pause().stop().destroy()
   }
 
-  @Test fun returningToThePinDialogRestoresInputFocusAndClearsOldDigits() {
+  @Test fun returningAfterPauseUsesAFreshDialogWithFocusAndWithoutOldDigits() {
     ScreenLockController.configure(RuntimeEnvironment.getApplication(), true)
     val controller = Robolectric.buildActivity(HostActivity::class.java).setup()
     val fragment = show(controller.get(), setup = true)
     val input = fragment.requireView().findViewById<TextInputEditText>(R.id.screen_lock_pin_input)
     input.setText("1234")
     controller.pause()
-    assertTrue(fragment.requireView().findViewById<android.view.View>(R.id.screen_lock_pin_cancel).requestFocus())
     controller.resume().postResume()
+    controller.get().supportFragmentManager.executePendingTransactions()
+    assertTrue(controller.get().supportFragmentManager.fragments.filterIsInstance<ScreenLockPinDialogFragment>().isEmpty())
+    val fresh = show(controller.get(), setup = true)
+    val freshInput = fresh.requireView().findViewById<TextInputEditText>(R.id.screen_lock_pin_input)
 
-    assertTrue(input.hasFocus())
+    assertNotSame(fragment, fresh)
+    assertTrue(freshInput.hasFocus())
+    assertEquals("", freshInput.text.toString())
     assertEquals("", input.text.toString())
     controller.pause().stop().destroy()
   }

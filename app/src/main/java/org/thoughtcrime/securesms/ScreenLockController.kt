@@ -58,6 +58,11 @@ object ScreenLockController {
   @Synchronized
   fun isCurrentAuthentication(generation: Long): Boolean = session.isCurrent(generation)
 
+  /** A resumed activity must not retry prompts while the session still awaits foreground resume. */
+  @JvmStatic
+  @Synchronized
+  fun isAuthenticationReady(): Boolean = session.isCurrent(session.authenticationGeneration)
+
   @JvmStatic
   @Synchronized
   fun isAccessAllowed(): Boolean {
