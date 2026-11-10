@@ -16,7 +16,7 @@ import java.io.File
 @Config(application = Application::class, manifest = Config.NONE, sdk = [28])
 class ScreenLockFailureBlobCleanupTest {
   @Test fun deletesConversationBlobsButKeepsBackupsAndStickerPacks() {
-    val context = RuntimeEnvironment.getApplication<Application>()
+    val context = RuntimeEnvironment.getApplication()
     val provider = BlobProvider(context, mockk())
     val deleted = listOf("single_session_blobs", "multi_session_blobs", "draft_blobs").map {
       File(context.getDir(it, Context.MODE_PRIVATE), "sample").apply { writeText("local conversation") }
