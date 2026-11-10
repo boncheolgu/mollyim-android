@@ -57,7 +57,10 @@ object ScreenLockFailureCleanup {
     SignalExecutors.BOUNDED_IO.execute {
       val visible = AppDependencies.messageNotifier.visibleThread.orElse(null) ?: return@execute
       val recipient = SignalDatabase.threads.getRecipientIdForThreadId(visible.threadId) ?: return@execute
-      if (AppDependencies.messageNotifier.visibleThread.orElse(null) == visible) recordConversation(context, recipient)
+      ThreadUtil.runOnMain {
+        // Conversation resume and visible-thread changes also run on main. Never overwrite a newer opened chat.
+        if (AppDependencies.messageNotifier.visibleThread.orElse(null) == visible) recordConversation(context, recipient)
+      }
     }
   }
 
