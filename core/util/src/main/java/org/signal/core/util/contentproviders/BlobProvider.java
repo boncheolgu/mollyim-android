@@ -292,6 +292,19 @@ public class BlobProvider {
     }
   }
 
+  /** Clears temporary conversation media and drafts, preserving separately stored backups. */
+  @WorkerThread
+  public synchronized void clearConversationBlobs(@NonNull Context context) throws IOException {
+    memoryBlobs.clear();
+    for (String name : new String[] { SINGLE_SESSION_DIRECTORY, MULTI_SESSION_DIRECTORY, DRAFT_ATTACHMENTS_DIRECTORY }) {
+      File[] files = getOrCreateDirectory(context, name).listFiles();
+      if (files == null) throw new IOException("Cannot list conversation blob directory");
+      for (File file : files) {
+        if (!file.delete() && file.exists()) throw new IOException("Cannot delete conversation blob");
+      }
+    }
+  }
+
   @VisibleForTesting
   public synchronized byte[] getMemoryBlob(@NonNull Uri uri) {
     return memoryBlobs.get(uri);

@@ -45,6 +45,7 @@ import org.thoughtcrime.securesms.util.MediaUtil
 import org.thoughtcrime.securesms.util.concurrent.SerialMonoLifoExecutor
 import org.thoughtcrime.securesms.util.hasTextSlide
 import org.thoughtcrime.securesms.util.requireTextSlide
+import org.thoughtcrime.securesms.screenlock.ScreenLockFailureCleanup
 import java.io.IOException
 import java.util.concurrent.Executor
 
@@ -55,6 +56,7 @@ class DraftRepository(
   private val saveDraftsExecutor: Executor = SerialMonoLifoExecutor(SignalExecutors.BOUNDED),
   private val conversationArguments: ConversationArgs? = null
 ) {
+  private val cleanupGeneration = ScreenLockFailureCleanup.draftGeneration()
 
   companion object {
     val TAG = Log.tag(DraftRepository::class.java)
@@ -168,17 +170,21 @@ class DraftRepository(
   fun saveDrafts(threadId: Long, drafts: Drafts) {
     require(threadId != -1L)
 
+    if (ScreenLockFailureCleanup.pending) return
+
     saveDraftsExecutor.execute {
-      if (drafts.isNotEmpty()) {
-        draftTable.replaceDrafts(threadId, drafts)
-        if (drafts.shouldUpdateSnippet()) {
-          threadTable.updateSnippet(threadId, drafts.getSnippet(context), drafts.getUriSnippet(), System.currentTimeMillis(), MessageTypes.BASE_DRAFT_TYPE, true)
-        } else {
+      ScreenLockFailureCleanup.saveDraftIfCurrent(cleanupGeneration) {
+        if (drafts.isNotEmpty()) {
+          draftTable.replaceDrafts(threadId, drafts)
+          if (drafts.shouldUpdateSnippet()) {
+            threadTable.updateSnippet(threadId, drafts.getSnippet(context), drafts.getUriSnippet(), System.currentTimeMillis(), MessageTypes.BASE_DRAFT_TYPE, true)
+          } else {
+            threadTable.update(threadId, unarchive = false, allowDeletion = false)
+          }
+        } else if (threadId > 0) {
+          draftTable.clearDrafts(threadId)
           threadTable.update(threadId, unarchive = false, allowDeletion = false)
         }
-      } else if (threadId > 0) {
-        draftTable.clearDrafts(threadId)
-        threadTable.update(threadId, unarchive = false, allowDeletion = false)
       }
     }
   }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="screen_lock_failure_cleanup_title">Delete chats after 5 failed PIN attempts</string>
+    <string name="screen_lock_failure_cleanup_summary">Try to warn the last opened chat, then delete all local chats, attachments, drafts, and call history. Deletion continues even if sending fails.</string>
+    <string name="screen_lock_failure_cleanup_confirmation">After 5 consecutive incorrect PIN entries, Memoly will try for up to 3 seconds to send a warning to the last opened one-to-one or group chat, then delete all chat history, attachments, drafts, and call history on this device, even if the warning cannot be sent. If no eligible chat was opened, deletion still runs. This cannot be undone. Your account, settings, and sticker packs are kept. Copies on other devices and existing backups are not deleted. A correct normal PIN resets the counter. A valid decoy PIN does not trigger deletion.</string>
+    <string name="screen_lock_failure_cleanup_enable">Enable automatic deletion</string>
+    <string name="screen_lock_failure_cleanup_running">Deleting local chat history…</string>
+    <string name="screen_lock_failure_cleanup_message">Memoly security alert: 5 consecutive incorrect app PIN attempts were detected. Local chat history on this device is being deleted. This automated message does not indicate that the app has been unlocked.</string>
+</resources>

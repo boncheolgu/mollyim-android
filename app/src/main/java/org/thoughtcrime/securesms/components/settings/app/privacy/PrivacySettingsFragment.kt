@@ -55,6 +55,7 @@ import org.thoughtcrime.securesms.screenlock.ScreenLockPinDialogFragment
 import org.thoughtcrime.securesms.screenlock.ScreenLockPreferences
 import org.thoughtcrime.securesms.screenlock.ScreenLockDecoyLauncher
 import org.thoughtcrime.securesms.screenlock.ScreenLockPinStore
+import org.thoughtcrime.securesms.screenlock.ScreenLockFailureCleanup
 
 private val TAG = Log.tag(PrivacySettingsFragment::class.java)
 
@@ -266,6 +267,12 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
       )
 
       if (state.screenLockMode == ScreenLockMode.PIN) {
+        switchPref(
+          title = DSLSettingsText.from(R.string.screen_lock_failure_cleanup_title),
+          summary = DSLSettingsText.from(R.string.screen_lock_failure_cleanup_summary),
+          isChecked = state.screenLockFailureCleanup,
+          onClick = { changeFailureCleanup(!state.screenLockFailureCleanup) }
+        )
         clickPref(
           title = DSLSettingsText.from(R.string.screen_lock_change_pin),
           summary = if (state.screenLockDecoyTarget != null) DSLSettingsText.from(R.string.screen_lock_decoy_reset_on_pin_change) else null,
@@ -404,6 +411,34 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
   }
 
   private fun timeoutLabel(seconds: Long): String = getDeviceLockTimeoutSummary(seconds)
+
+  private fun changeFailureCleanup(enabled: Boolean) {
+    authenticateCurrentLock {
+      val generation = ScreenLockController.authenticationGeneration()
+      val application = requireContext().applicationContext
+      val applyChange: () -> Unit = {
+        viewLifecycleOwner.lifecycleScope.launch {
+          val updated = withContext(Dispatchers.IO) {
+            try { ScreenLockFailureCleanup.setEnabled(application, enabled, generation) } catch (_: Exception) { false }
+          }
+          if (isResumed) {
+            if (!updated) Toast.makeText(context, R.string.screen_lock_pin_unavailable, Toast.LENGTH_LONG).show()
+            viewModel.refresh()
+          }
+        }
+      }
+      if (enabled) {
+        MaterialAlertDialogBuilder(requireContext())
+          .setTitle(R.string.screen_lock_failure_cleanup_title)
+          .setMessage(R.string.screen_lock_failure_cleanup_confirmation)
+          .setPositiveButton(R.string.screen_lock_failure_cleanup_enable) { _, _ -> applyChange() }
+          .setNegativeButton(android.R.string.cancel, null)
+          .show()
+      } else {
+        applyChange()
+      }
+    }
+  }
 
   private fun changeScreenLockMode(mode: ScreenLockMode) {
     authenticateCurrentLock {

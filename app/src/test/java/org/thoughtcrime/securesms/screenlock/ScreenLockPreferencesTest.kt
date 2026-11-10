@@ -111,4 +111,32 @@ class ScreenLockPreferencesTest {
     assertNull(restored.decoy)
     assertEquals(ScreenLockMode.PIN, restored.mode)
   }
+
+  @Test fun cleanupIncidentSurvivesProcessRestart() {
+    val policy = ScreenLockFailurePolicy(true, 5, true, 42, ScreenLockFailurePolicy.Phase.DELETE_PENDING)
+    ScreenLockPreferences.write(context, ScreenLockPreferences.Record(ScreenLockMode.PIN, cleanup = policy))
+    clearCache()
+    assertEquals(policy, ScreenLockPreferences.read(context).cleanup)
+    assertTrue(ScreenLockFailureCleanup.pending)
+    ScreenLockPreferences.write(context, ScreenLockPreferences.Record(ScreenLockMode.OFF))
+  }
+
+  @Test fun oldVersionsDoNotEnableDeletionOnUpgrade() {
+    ScreenLockPreferences.write(context, ScreenLockPreferences.Record(ScreenLockMode.PIN))
+    val json = org.json.JSONObject(recordFile().readText()).apply { remove("failureCleanup") }
+    recordFile().writeText(json.toString())
+    clearCache()
+    assertFalse(ScreenLockPreferences.isFailureCleanupEnabled(context))
+    assertEquals(ScreenLockFailurePolicy.Phase.IDLE, ScreenLockPreferences.read(context).cleanup.phase)
+  }
+
+  @Test fun malformedCleanupPolicyDoesNotDiscardThePinOrArmDeletion() {
+    ScreenLockPreferences.write(context, ScreenLockPreferences.Record(ScreenLockMode.PIN, alias = "normal", verifier = "normal-tag"))
+    val json = org.json.JSONObject(recordFile().readText()).put("failureCleanup", org.json.JSONObject().put("enabled", true))
+    recordFile().writeText(json.toString())
+    clearCache()
+    assertEquals("normal-tag", ScreenLockPreferences.read(context).verifier)
+    assertFalse(ScreenLockPreferences.isFailureCleanupEnabled(context))
+    assertFalse(ScreenLockFailureCleanup.pending)
+  }
 }

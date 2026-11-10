@@ -25,7 +25,8 @@ object ScreenLockPreferences {
     val failures: Int = 0,
     val blockedUntil: Long = 0,
     val bootCount: Int = -1,
-    val decoy: Decoy? = null
+    val decoy: Decoy? = null,
+    val cleanup: ScreenLockFailurePolicy = ScreenLockFailurePolicy()
   )
 
   private var file: AtomicFile? = null
@@ -35,6 +36,7 @@ object ScreenLockPreferences {
   @JvmStatic fun getMode(context: Context): ScreenLockMode = read(context).mode
   @JvmStatic fun getTimeoutSeconds(context: Context): Long = read(context).timeoutSeconds
   @JvmStatic fun getDecoyTarget(context: Context): String? = read(context).takeIf { it.mode == ScreenLockMode.PIN }?.decoy?.component
+  @JvmStatic fun isFailureCleanupEnabled(context: Context): Boolean = read(context).cleanup.enabled
 
   @Synchronized
   internal fun read(context: Context): Record {
@@ -58,7 +60,8 @@ object ScreenLockPreferences {
           json.optJSONObject("decoy")?.let {
             try { Decoy(it.getString("alias"), it.getString("salt"), it.getString("verifier"), it.getString("component")) }
             catch (_: Exception) { null }
-          }
+          },
+          ScreenLockFailurePolicy.fromJson(json.optJSONObject("failureCleanup"))
         )
       } catch (_: Exception) {
         // A damaged enabled record must not silently turn authentication off.
@@ -76,6 +79,7 @@ object ScreenLockPreferences {
       }
     }
     cached = record
+    ScreenLockFailureCleanup.pending = record.cleanup.phase != ScreenLockFailurePolicy.Phase.IDLE
     return record
   }
 
@@ -87,6 +91,7 @@ object ScreenLockPreferences {
       .put("salt", record.salt ?: "").put("verifier", record.verifier ?: "")
       .put("failures", record.failures).put("blockedUntil", record.blockedUntil)
       .put("bootCount", record.bootCount)
+      .put("failureCleanup", record.cleanup.toJson())
     if (record.mode == ScreenLockMode.PIN) record.decoy?.let {
       json.put("decoy", JSONObject().put("alias", it.alias).put("salt", it.salt)
         .put("verifier", it.verifier).put("component", it.component))
@@ -97,6 +102,7 @@ object ScreenLockPreferences {
       output.write(json.toString().toByteArray(Charsets.UTF_8))
       storage.finishWrite(output)
       cached = record
+      ScreenLockFailureCleanup.pending = record.cleanup.phase != ScreenLockFailurePolicy.Phase.IDLE
       // This non-secret, device-local marker distinguishes record loss from a fresh install.
       // The AtomicFile remains authoritative, including when enabling/disabling is interrupted.
       writeModeMarker(context, record.mode)

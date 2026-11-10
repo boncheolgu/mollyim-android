@@ -190,6 +190,10 @@ class ScreenLockPinDialogFragment : DialogFragment() {
           } finally { pin.fill('\u0000') }
         }
         if (cancelled || !isResumed) return@launch
+        if (result == ScreenLockPinStore.Result.Cleanup) {
+          error?.setText(R.string.screen_lock_failure_cleanup_running)
+          return@launch
+        }
         if (listener !== requestListener || (!setup && !ScreenLockController.isCurrentAuthentication(requestGeneration))) {
           cancelRequest(false)
           return@launch
@@ -204,6 +208,7 @@ class ScreenLockPinDialogFragment : DialogFragment() {
               // Commit app-unlock authentication before dismissal restores host focus.
               // Otherwise a focus/top-resume callback can launch another locked prompt.
               callback.onSuccess()
+              ScreenLockFailureCleanup.recordVisibleConversation(context)
               dismissAllowingStateLoss()
             } else {
               dismissAllowingStateLoss()
@@ -228,6 +233,10 @@ class ScreenLockPinDialogFragment : DialogFragment() {
             }
           }
           ScreenLockPinStore.Result.Unavailable -> error?.setText(R.string.screen_lock_pin_unavailable)
+          ScreenLockPinStore.Result.Cleanup -> {
+            retry = false
+            error?.setText(R.string.screen_lock_failure_cleanup_running)
+          }
           is ScreenLockPinStore.Result.Blocked -> error?.text = getString(R.string.screen_lock_pin_wait, (result.milliseconds + 999) / 1000)
         }
       } finally {

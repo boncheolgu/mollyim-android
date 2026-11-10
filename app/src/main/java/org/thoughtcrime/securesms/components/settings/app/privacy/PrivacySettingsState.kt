@@ -15,5 +15,6 @@ data class PrivacySettingsState(
   val screenLockDecoyTarget: String?,
   val screenSecurity: Boolean,
   val incognitoKeyboard: Boolean,
-  val universalExpireTimer: Int
+  val universalExpireTimer: Int,
+  val screenLockFailureCleanup: Boolean = false
 )
