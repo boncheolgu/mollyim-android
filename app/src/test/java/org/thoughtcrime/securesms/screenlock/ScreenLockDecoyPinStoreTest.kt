@@ -41,7 +41,7 @@ class ScreenLockDecoyPinStoreTest {
     every { KeyStoreHelper.getKeyStoreEntryHmac(any()) } answers { keys[firstArg()] ?: throw UnrecoverableEntryException() }
     every { KeyStoreHelper.deleteKeyStoreEntry(any()) } answers { keys.remove(firstArg<String>()); Unit }
     mockkObject(ScreenLockDecoyLauncher)
-    mockkObject(ScreenLockFailureCleanup)
+    mockkStatic(ScreenLockFailureCleanup::class)
     every { ScreenLockFailureCleanup.enqueue(any()) } returns Unit
     every { ScreenLockDecoyLauncher.isValidTarget(any(), target) } returns true
     ScreenLockPreferences.write(application, ScreenLockPreferences.Record(ScreenLockMode.OFF))
@@ -53,7 +53,7 @@ class ScreenLockDecoyPinStoreTest {
     ScreenLockPinStore.setMode(application, ScreenLockMode.OFF)
     ScreenLockController.configure(application, false)
     unmockkObject(ScreenLockDecoyLauncher)
-    unmockkObject(ScreenLockFailureCleanup)
+    unmockkStatic(ScreenLockFailureCleanup::class)
     unmockkStatic(KeyStoreHelper::class)
     clearCache()
   }
