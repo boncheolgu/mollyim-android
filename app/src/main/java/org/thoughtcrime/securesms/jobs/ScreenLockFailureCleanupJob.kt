@@ -13,7 +13,8 @@ class ScreenLockFailureCleanupJob private constructor(parameters: Parameters) : 
   override fun serialize(): ByteArray? = null
   override fun onRun() = ScreenLockFailureCleanup.runPending(context)
   override fun onShouldRetry(e: Exception) = e is IOException
-  override fun getNextRunAttemptBackoff(pastAttemptCount: Int, exception: Exception) = 1_000L
+  override fun getNextRunAttemptBackoff(pastAttemptCount: Int, exception: Exception) =
+    (1_000L shl (pastAttemptCount - 1).coerceIn(0, 6)).coerceAtMost(60_000L)
   override fun onFailure() = Unit
 
   class Factory : Job.Factory<ScreenLockFailureCleanupJob> {

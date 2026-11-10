@@ -93,6 +93,17 @@ class ScreenLockDecoyPinStoreTest {
     assertEquals(0, ScreenLockPreferences.read(application).cleanup.failures)
   }
 
+  @Test fun supersededPromptCannotTriggerDestructiveCleanup() {
+    ScreenLockPreferences.update(application) { it.copy(cleanup = ScreenLockFailurePolicy(enabled = true, failures = 4)) }
+    val staleGeneration = ScreenLockController.authenticationGeneration()
+    ScreenLockController.forceLock()
+    val pin = "999999".toCharArray()
+    assertEquals(ScreenLockPinStore.Result.Unavailable, ScreenLockPinStore.verifyForRequest(application, pin, true, staleGeneration))
+    assertEquals(4, ScreenLockPreferences.read(application).cleanup.failures)
+    assertEquals(ScreenLockFailurePolicy.Phase.IDLE, ScreenLockPreferences.read(application).cleanup.phase)
+    assertTrue(pin.all { it == '\u0000' })
+  }
+
   @Test fun knownDecoyIsExcludedEvenInSettingsConfirmation() {
     assertEquals(ScreenLockPinStore.Result.Success, install())
     ScreenLockPreferences.update(application) { it.copy(cleanup = ScreenLockFailurePolicy(enabled = true)) }

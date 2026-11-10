@@ -24,6 +24,18 @@ object ScreenLockPinStore {
   private const val PREFIX = "molly-screen-pin-"
   private const val DECOY_PREFIX = "memoly-decoy-pin-"
 
+  /** A cancelled/replaced prompt must not count toward a destructive threshold. */
+  @Synchronized
+  internal fun verifyForRequest(context: Context, pin: CharArray, allowDecoy: Boolean, generation: Long): Result {
+    var result: Result = Result.Unavailable
+    try {
+      ScreenLockController.runIfCurrentAuthentication(generation) {
+        result = verify(context, pin, allowDecoy)
+      }
+      return result
+    } finally { pin.fill('\u0000') }
+  }
+
   @JvmStatic
   @Synchronized
   fun verify(context: Context, pin: CharArray, allowDecoy: Boolean = false): Result {

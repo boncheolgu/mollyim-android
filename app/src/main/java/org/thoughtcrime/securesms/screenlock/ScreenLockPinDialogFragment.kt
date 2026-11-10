@@ -182,7 +182,7 @@ class ScreenLockPinDialogFragment : DialogFragment() {
               if (target != null) ScreenLockPinStore.installDecoy(context, pin, target, requestGeneration) { job?.isActive == true }
               else if (ScreenLockPinStore.install(context, pin, requestGeneration) { job?.isActive == true }) ScreenLockPinStore.Result.Success
               else ScreenLockPinStore.Result.Unavailable
-            } else ScreenLockPinStore.verify(context, pin, allowDecoy)
+            } else ScreenLockPinStore.verifyForRequest(context, pin, allowDecoy, requestGeneration)
           } catch (_: Exception) {
             ScreenLockPinStore.Result.Unavailable
           } catch (_: AssertionError) {
