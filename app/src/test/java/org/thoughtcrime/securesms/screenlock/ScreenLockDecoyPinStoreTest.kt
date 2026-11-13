@@ -41,6 +41,8 @@ class ScreenLockDecoyPinStoreTest {
     every { KeyStoreHelper.getKeyStoreEntryHmac(any()) } answers { keys[firstArg()] ?: throw UnrecoverableEntryException() }
     every { KeyStoreHelper.deleteKeyStoreEntry(any()) } answers { keys.remove(firstArg<String>()); Unit }
     mockkObject(ScreenLockDecoyLauncher)
+    mockkStatic(ScreenLockFailureCleanup::class)
+    every { ScreenLockFailureCleanup.enqueue(any()) } returns Unit
     every { ScreenLockDecoyLauncher.isValidTarget(any(), target) } returns true
     ScreenLockPreferences.write(application, ScreenLockPreferences.Record(ScreenLockMode.OFF))
     ScreenLockController.configure(application, true)
@@ -51,6 +53,7 @@ class ScreenLockDecoyPinStoreTest {
     ScreenLockPinStore.setMode(application, ScreenLockMode.OFF)
     ScreenLockController.configure(application, false)
     unmockkObject(ScreenLockDecoyLauncher)
+    unmockkStatic(ScreenLockFailureCleanup::class)
     unmockkStatic(KeyStoreHelper::class)
     clearCache()
   }
@@ -63,6 +66,53 @@ class ScreenLockDecoyPinStoreTest {
 
   private fun install(pin: String = "654321", generation: Long = ScreenLockController.authenticationGeneration()): ScreenLockPinStore.Result =
     ScreenLockPinStore.installDecoy(application, pin.toCharArray(), target, generation) { true }
+
+  @Test fun fifthWrongPinPersistsCleanupAndCannotBeBypassedByCorrectPin() {
+    ScreenLockPreferences.update(application) { it.copy(cleanup = ScreenLockFailurePolicy(enabled = true, lastRecipient = 42)) }
+    repeat(4) { assertEquals(ScreenLockPinStore.Result.Incorrect, ScreenLockPinStore.verify(application, "999999".toCharArray(), true)) }
+    assertEquals(ScreenLockPinStore.Result.Cleanup, ScreenLockPinStore.verify(application, "999999".toCharArray(), true))
+    assertEquals(ScreenLockFailurePolicy.Phase.WARNING_PENDING, ScreenLockPreferences.read(application).cleanup.phase)
+    assertEquals(ScreenLockPinStore.Result.Cleanup, ScreenLockPinStore.verify(application, "123456".toCharArray(), true))
+    assertFalse(ScreenLockController.isAccessAllowed())
+    assertFalse(ScreenLockController.completeAuthentication(ScreenLockController.authenticationGeneration()))
+  }
+
+  @Test fun correctPinResetsBothCountersBeforeThreshold() {
+    ScreenLockPreferences.update(application) { it.copy(cleanup = ScreenLockFailurePolicy(enabled = true)) }
+    repeat(4) { ScreenLockPinStore.verify(application, "999999".toCharArray(), true) }
+    assertEquals(ScreenLockPinStore.Result.Success, ScreenLockPinStore.verify(application, "123456".toCharArray(), true))
+    assertEquals(0, ScreenLockPreferences.read(application).cleanup.failures)
+  }
+
+  @Test fun keyStoreErrorsAndRetryWaitDoNotCountAsWrongPinsForCleanup() {
+    ScreenLockPreferences.update(application) { it.copy(cleanup = ScreenLockFailurePolicy(enabled = true), blockedUntil = Long.MAX_VALUE) }
+    assertTrue(ScreenLockPinStore.verify(application, "999999".toCharArray(), true) is ScreenLockPinStore.Result.Blocked)
+    assertEquals(0, ScreenLockPreferences.read(application).cleanup.failures)
+    ScreenLockPreferences.update(application) { it.copy(blockedUntil = 0, alias = "molly-screen-pin-missing") }
+    assertEquals(ScreenLockPinStore.Result.Unavailable, ScreenLockPinStore.verify(application, "999999".toCharArray(), true))
+    assertEquals(0, ScreenLockPreferences.read(application).cleanup.failures)
+  }
+
+  @Test fun supersededPromptCannotTriggerDestructiveCleanup() {
+    ScreenLockPreferences.update(application) { it.copy(cleanup = ScreenLockFailurePolicy(enabled = true, failures = 4)) }
+    val staleGeneration = ScreenLockController.authenticationGeneration()
+    ScreenLockController.forceLock()
+    val pin = "999999".toCharArray()
+    assertEquals(ScreenLockPinStore.Result.Unavailable, ScreenLockPinStore.verifyForRequest(application, pin, true, staleGeneration))
+    assertEquals(4, ScreenLockPreferences.read(application).cleanup.failures)
+    assertEquals(ScreenLockFailurePolicy.Phase.IDLE, ScreenLockPreferences.read(application).cleanup.phase)
+    assertTrue(pin.all { it == '\u0000' })
+  }
+
+  @Test fun knownDecoyIsExcludedEvenInSettingsConfirmation() {
+    assertEquals(ScreenLockPinStore.Result.Success, install())
+    ScreenLockPreferences.update(application) { it.copy(cleanup = ScreenLockFailurePolicy(enabled = true)) }
+    repeat(4) { ScreenLockPinStore.verify(application, "999999".toCharArray(), true) }
+    assertTrue(ScreenLockPinStore.verify(application, "654321".toCharArray(), true) is ScreenLockPinStore.Result.Decoy)
+    assertTrue(ScreenLockPinStore.verify(application, "654321".toCharArray(), false) is ScreenLockPinStore.Result.Blocked)
+    assertEquals(4, ScreenLockPreferences.read(application).cleanup.failures)
+    assertEquals(ScreenLockFailurePolicy.Phase.IDLE, ScreenLockPreferences.read(application).cleanup.phase)
+  }
 
   @Test fun alternatePinNeverAuthenticatesAndIsRejectedForSettings() {
     assertEquals(ScreenLockPinStore.Result.Success, install())

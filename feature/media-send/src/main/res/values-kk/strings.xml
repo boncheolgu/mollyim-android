@@ -47,23 +47,23 @@
   <!-- Dialog title asking users for microphone permission -->
   <string name="CameraXFragment_allow_access_microphone">Микрофонды пайдалануға рұқсат етіңіз</string>
   <!-- Text explaining why Signal needs camera access in order to take photos and videos -->
-  <string name="CameraXFragment_to_capture_photos_and_video_allow_camera">Фотосуреттер мен видео түсіру үшін Molly қолданбасына камера ашық болу керек.</string>
+  <string name="CameraXFragment_to_capture_photos_and_video_allow_camera">Фотосуреттер мен видео түсіру үшін Memoly қолданбасына камера ашық болу керек.</string>
   <!-- Text explaining why Signal needs camera and microphone access in order to take photos and videos -->
-  <string name="CameraXFragment_to_capture_photos_and_video_allow_camera_microphone">Фотосуреттер мен видео түсіру үшін Molly қолданбасына камера мен микрофонды пайдалануға рұқсат керек.</string>
+  <string name="CameraXFragment_to_capture_photos_and_video_allow_camera_microphone">Фотосуреттер мен видео түсіру үшін Memoly қолданбасына камера мен микрофонды пайдалануға рұқсат керек.</string>
   <!-- Text explaining why Signal needs microphone access to take videos -->
-  <string name="CameraXFragment_to_capture_videos_with_sound">Видеоларды дауыспен түсіру үшін Molly қолданбасына микрофонды пайдалануға рұқсат керек.</string>
+  <string name="CameraXFragment_to_capture_videos_with_sound">Видеоларды дауыспен түсіру үшін Memoly қолданбасына микрофонды пайдалануға рұқсат керек.</string>
   <!-- Text explaining why Signal needs camera access to scan QR codes -->
-  <string name="CameraXFragment_to_scan_qr_code_allow_camera">QR кодты сканерлеу үшін Molly қолданбасына камераны пайдалануға рұқсат керек.</string>
+  <string name="CameraXFragment_to_scan_qr_code_allow_camera">QR кодты сканерлеу үшін Memoly қолданбасына камераны пайдалануға рұқсат керек.</string>
   <!-- Toast dialog explaining why Signal needs camera permissions when capturing photos -->
-  <string name="CameraXFragment_signal_needs_camera_access_capture_photos">Фотосуретке түсіру үшін Molly қолданбасына камераны пайдалануға рұқсат керек</string>
+  <string name="CameraXFragment_signal_needs_camera_access_capture_photos">Фотосуретке түсіру үшін Memoly қолданбасына камераны пайдалануға рұқсат керек</string>
   <!-- Toast dialog explaining why Signal needs camera permissions when scanning QR codes -->
-  <string name="CameraXFragment_signal_needs_camera_access_scan_qr_code">QR кодтарды сканерлеу үшін Molly қолданбасына камераны пайдалануға рұқсат керек</string>
+  <string name="CameraXFragment_signal_needs_camera_access_scan_qr_code">QR кодтарды сканерлеу үшін Memoly қолданбасына камераны пайдалануға рұқсат керек</string>
   <!-- Toast dialog explaining why Signal needs microphone permissions -->
-  <string name="CameraXFragment_signal_needs_microphone_access_video">Видео түсіру үшін Molly қолданбасына микрофонды пайдалануға рұқсат керек</string>
+  <string name="CameraXFragment_signal_needs_microphone_access_video">Видео түсіру үшін Memoly қолданбасына микрофонды пайдалануға рұқсат керек</string>
   <!-- Dialog description that explains the steps needed to give camera permission -->
-  <string name="CameraXFragment_to_capture_photos">Molly-да фотосуреттер түсіру үшін:</string>
+  <string name="CameraXFragment_to_capture_photos">Memoly-да фотосуреттер түсіру үшін:</string>
   <!-- Dialog description that explains the steps needed to give camera and microphone permission -->
-  <string name="CameraXFragment_to_capture_photos_videos">Molly-да фотосуреттер мен видеоларды түсіру үшін:</string>
+  <string name="CameraXFragment_to_capture_photos_videos">Memoly-да фотосуреттер мен видеоларды түсіру үшін:</string>
   <!-- Dialog description that explains the steps needed to give microphone permission -->
   <string name="CameraXFragment_to_capture_videos">Видеоларды дауыспен түсіру үшін:</string>
   <!-- Dialog description that explains the steps needed to give Signal camera permissions -->
@@ -83,7 +83,7 @@
   <!-- Accessibility label for the send button in media selection -->
   <string name="CameraXFragment_send">Жіберу</string>
   <!-- Displayed in a permissions dialog when the user has denied access to hardware for image and video capture. -->
-  <string name="CameraXFragment_signal_needs_the_recording_permissions_to_capture_video">Видео түсіру үшін Molly қолданбасына микрофон ашық болу керек, бірақ параметрлерде оны пайдалануға рұқсат берілмеген. Қолданба параметрлеріне кіріп, \"Рұқсаттар\" бөлімін таңдаңыз да, \"Микрофон\" және \"Камера\" параметрлерін қосыңыз.</string>
+  <string name="CameraXFragment_signal_needs_the_recording_permissions_to_capture_video">Видео түсіру үшін Memoly қолданбасына микрофон ашық болу керек, бірақ параметрлерде оны пайдалануға рұқсат берілмеген. Қолданба параметрлеріне кіріп, \"Рұқсаттар\" бөлімін таңдаңыз да, \"Микрофон\" және \"Камера\" параметрлерін қосыңыз.</string>
 
   <!-- Displayed when there is an error capturing video -->
   <string name="MediaSendViewModel__error_recording_video">Бейнені жазу кезінде қате шықты</string>

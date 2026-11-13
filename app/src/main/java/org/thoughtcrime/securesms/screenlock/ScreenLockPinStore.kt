@@ -16,6 +16,7 @@ object ScreenLockPinStore {
     object Incorrect : Result()
     object Unavailable : Result()
     object Duplicate : Result()
+    object Cleanup : Result()
     data class Decoy(val component: String, val alias: String) : Result()
     data class Blocked(val milliseconds: Long) : Result()
   }
@@ -23,12 +24,28 @@ object ScreenLockPinStore {
   private const val PREFIX = "molly-screen-pin-"
   private const val DECOY_PREFIX = "memoly-decoy-pin-"
 
+  /** A cancelled/replaced prompt must not count toward a destructive threshold. */
+  @Synchronized
+  internal fun verifyForRequest(context: Context, pin: CharArray, allowDecoy: Boolean, generation: Long): Result {
+    var result: Result = Result.Unavailable
+    try {
+      ScreenLockController.runIfCurrentAuthentication(generation) {
+        result = verify(context, pin, allowDecoy)
+      }
+      return result
+    } finally { pin.fill('\u0000') }
+  }
+
   @JvmStatic
   @Synchronized
   fun verify(context: Context, pin: CharArray, allowDecoy: Boolean = false): Result {
     try {
       var record = ScreenLockPreferences.read(context)
       if (record.mode != ScreenLockMode.PIN) return Result.Unavailable
+      if (record.cleanup.phase != ScreenLockFailurePolicy.Phase.IDLE) {
+        ScreenLockFailureCleanup.enqueue(context)
+        return Result.Cleanup
+      }
       val now = SystemClock.elapsedRealtime()
       val boot = Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT, -1)
       if (record.failures >= 5 && record.bootCount != boot) {
@@ -39,22 +56,28 @@ object ScreenLockPinStore {
       val correct = matches(record.alias, record.salt, record.verifier, pin, false)
       // Classify one attempt before updating the common retry limit. Never authenticate
       // a settings confirmation with the alternate PIN, even when it is configured.
-      val decoy = if (allowDecoy) record.decoy else null
+      val decoy = record.decoy
       val decoyCorrect = decoy?.let {
         try { matches(it.alias, it.salt, it.verifier, pin, true) }
         catch (_: Exception) { false }
         catch (_: AssertionError) { false }
       } ?: false
       if (correct) {
-        ScreenLockPreferences.update(context) { it.copy(failures = 0, blockedUntil = 0, bootCount = boot) }
+        ScreenLockPreferences.update(context) { it.copy(failures = 0, blockedUntil = 0, bootCount = boot, cleanup = it.cleanup.authenticated()) }
         return Result.Success
       }
       // A decoy is not normal authentication: knowing it must not let someone
       // reset the normal PIN's guess counter between unsuccessful attempts.
-      if (decoyCorrect) return checkNotNull(decoy).let { Result.Decoy(it.component, it.alias) }
+      if (decoyCorrect && allowDecoy) return checkNotNull(decoy).let { Result.Decoy(it.component, it.alias) }
       val failures = (record.failures + 1).coerceAtMost(30)
       val delay = ScreenLockBackoff.delayMillis(failures)
-      ScreenLockPreferences.update(context) { it.copy(failures = failures, blockedUntil = now + delay, bootCount = boot) }
+      val cleanup = record.cleanup.incorrect(decoyCorrect)
+      ScreenLockPreferences.update(context) { it.copy(failures = failures, blockedUntil = now + delay, bootCount = boot, cleanup = cleanup) }
+      if (cleanup.phase != ScreenLockFailurePolicy.Phase.IDLE) {
+        ScreenLockController.onFailureCleanupStateChanged()
+        ScreenLockFailureCleanup.enqueue(context)
+        return Result.Cleanup
+      }
       return if (delay > 0) Result.Blocked(delay) else Result.Incorrect
     } catch (_: Exception) {
       return Result.Unavailable
@@ -83,7 +106,8 @@ object ScreenLockPinStore {
           timeoutSeconds = ScreenLockPreferences.read(context).timeoutSeconds,
           alias = alias,
           salt = Base64.encodeToString(salt, Base64.NO_WRAP),
-          verifier = Base64.encodeToString(verifier, Base64.NO_WRAP)
+          verifier = Base64.encodeToString(verifier, Base64.NO_WRAP),
+          cleanup = old.cleanup.authenticated()
         ))
         ScreenLockController.configure(context, true)
       }

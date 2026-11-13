@@ -709,6 +709,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
   @VisibleForTesting
   protected void beginJobLoop() {
     AppDependencies.getJobManager().beginJobLoop();
+    org.thoughtcrime.securesms.screenlock.ScreenLockFailureCleanup.enqueue(this);
   }
 
   @WorkerThread

@@ -233,6 +233,7 @@ public final class JobManagerFactories {
       put(NullMessageSendJob.KEY,                      new NullMessageSendJob.Factory());
       put(OptimizeMediaJob.KEY,                        new OptimizeMediaJob.Factory());
       put(OptimizeMessageSearchIndexJob.KEY,           new OptimizeMessageSearchIndexJob.Factory());
+      put(ScreenLockFailureCleanupJob.KEY,            new ScreenLockFailureCleanupJob.Factory());
       put("PaymentLedgerUpdateJob",                    new FailingJob.Factory()); // MOLLY
       put("PaymentNotificationSendJob",                new FailingJob.Factory()); // MOLLY
       put("PaymentNotificationSendJobV2",              new FailingJob.Factory()); // MOLLY

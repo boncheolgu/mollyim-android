@@ -19,6 +19,7 @@ import org.thoughtcrime.securesms.screenlock.ScreenLockPreferences
 import org.thoughtcrime.securesms.screenlock.ScreenLockSession
 import org.thoughtcrime.securesms.screenlock.ScreenLockVisibilityObserver
 import org.thoughtcrime.securesms.screenlock.ScreenLockPinDialogFragment
+import org.thoughtcrime.securesms.screenlock.ScreenLockFailureCleanup
 import org.thoughtcrime.securesms.service.KeyCachingService
 import java.security.SecureRandom
 
@@ -56,13 +57,18 @@ object ScreenLockController {
 
   @JvmStatic
   @Synchronized
-  fun isCurrentAuthentication(generation: Long): Boolean = session.isCurrent(generation)
+  fun isCurrentAuthentication(generation: Long): Boolean = !ScreenLockFailureCleanup.pending && session.isCurrent(generation)
+
+  /** A resumed activity must not retry prompts while the session still awaits foreground resume. */
+  @JvmStatic
+  @Synchronized
+  fun isAuthenticationReady(): Boolean = !ScreenLockFailureCleanup.pending && session.isCurrent(session.authenticationGeneration)
 
   @JvmStatic
   @Synchronized
   fun isAccessAllowed(): Boolean {
     refreshTaskRemoval()
-    return !session.requiresAuthentication(SystemClock.elapsedRealtime())
+    return !ScreenLockFailureCleanup.pending && !session.requiresAuthentication(SystemClock.elapsedRealtime())
   }
 
   /** Recheck on the worker that performs a user action, not only when rendering its button. */
@@ -70,7 +76,7 @@ object ScreenLockController {
   @Synchronized
   fun runIfAccessAllowed(generation: Long, action: Runnable): Boolean {
     refreshTaskRemoval()
-    if (!session.canRunAction(SystemClock.elapsedRealtime(), generation)) return false
+    if (ScreenLockFailureCleanup.pending || !session.canRunAction(SystemClock.elapsedRealtime(), generation)) return false
     action.run()
     return true
   }
@@ -79,7 +85,7 @@ object ScreenLockController {
   @Synchronized
   fun <T> withAccessAllowed(generation: Long, fallback: T, action: () -> T): T {
     refreshTaskRemoval()
-    return if (session.canRunAction(SystemClock.elapsedRealtime(), generation)) action() else fallback
+    return if (!ScreenLockFailureCleanup.pending && session.canRunAction(SystemClock.elapsedRealtime(), generation)) action() else fallback
   }
 
   /** Notification/call actions can arrive before any new activity checks its task. */
@@ -90,7 +96,7 @@ object ScreenLockController {
   @JvmStatic
   @Synchronized
   fun runIfCurrentAuthentication(generation: Long, action: () -> Unit): Boolean {
-    if (!session.isCurrent(generation)) return false
+    if (ScreenLockFailureCleanup.pending || !session.isCurrent(generation)) return false
     action()
     return true
   }
@@ -98,6 +104,7 @@ object ScreenLockController {
   @JvmStatic
   @Synchronized
   fun completeAuthentication(generation: Long): Boolean {
+    if (ScreenLockFailureCleanup.pending) return false
     val completed = session.authenticate(generation)
     if (completed) visibility?.authenticationChanged()
     return completed
@@ -106,6 +113,15 @@ object ScreenLockController {
   @JvmStatic
   @Synchronized
   fun forceLock() = session.forceLock()
+
+  @JvmStatic
+  @Synchronized
+  fun onFailureCleanupStateChanged() {
+    session.forceLock()
+    visibility?.authenticationChanged()
+  }
+
+  internal fun finishActivitiesForFailureCleanup() { visibility?.finishDecoyExit() }
 
   @JvmStatic
   fun onActivityCreating(activity: Activity) = visibility?.creating(activity)
@@ -144,7 +160,7 @@ object ScreenLockController {
   @JvmStatic
   @Synchronized
   internal fun beginDecoyExit(context: Context, generation: Long): Boolean {
-    if (!session.isCurrent(generation) || ScreenLockPreferences.getMode(context) != ScreenLockMode.PIN) return false
+    if (ScreenLockFailureCleanup.pending || !session.isCurrent(generation) || ScreenLockPreferences.getMode(context) != ScreenLockMode.PIN) return false
     session.end()
     visibility?.prepareDecoyExit()
     blankScreen()

@@ -15,6 +15,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -46,6 +47,8 @@ class DecoyNotesActivity : AppCompatActivity() {
   private var revision = 0L
 
   override fun onCreate(savedInstanceState: Bundle?) {
+    // Follow the device theme independently of Memoly's appearance preference.
+    delegate.localNightMode = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
     super.onCreate(savedInstanceState)
     setContentView(R.layout.decoy_notes_activity)
     ScreenLockController.revealExemptWindow(window)

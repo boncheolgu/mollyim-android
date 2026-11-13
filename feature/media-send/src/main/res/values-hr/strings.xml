@@ -83,7 +83,7 @@
   <!-- Accessibility label for the send button in media selection -->
   <string name="CameraXFragment_send">Pošalji</string>
   <!-- Displayed in a permissions dialog when the user has denied access to hardware for image and video capture. -->
-  <string name="CameraXFragment_signal_needs_the_recording_permissions_to_capture_video">Molly zahtijeva dopuštenje za mikrofon za snimanje videa, ali je trajno odbijen. Otvorite postavke aplikacije, odaberite \"Dozvole\" i omogućite \"Mikrofon\" i \"Kamera\".</string>
+  <string name="CameraXFragment_signal_needs_the_recording_permissions_to_capture_video">Memoly zahtijeva dopuštenje za mikrofon za snimanje videa, ali je trajno odbijen. Otvorite postavke aplikacije, odaberite \"Dozvole\" i omogućite \"Mikrofon\" i \"Kamera\".</string>
 
   <!-- Displayed when there is an error capturing video -->
   <string name="MediaSendViewModel__error_recording_video">Pogreška pri snimanju videozapisa</string>

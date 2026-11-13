@@ -12,6 +12,7 @@ import io.mockk.slot
 import io.mockk.verify
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -27,11 +28,16 @@ import org.thoughtcrime.securesms.mms.ImageSlide
 import org.thoughtcrime.securesms.mms.PartAuthority
 import org.thoughtcrime.securesms.mms.SlideDeck
 import org.thoughtcrime.securesms.util.MediaUtil
+import org.thoughtcrime.securesms.testutil.MockAppDependenciesRule
 import java.util.Optional
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class)
 class StoryContextMenuTest {
+  // Attachment URI routing initializes PartAuthority's blob-provider dependency.
+  // Set it up explicitly instead of depending on an earlier test to initialize it.
+  @get:Rule val appDependencies = MockAppDependenciesRule()
+
   private val context: Context = ApplicationProvider.getApplicationContext()
   private val intentSlot = slot<Intent>()
   private val fragment = mockk<Fragment>(relaxUnitFun = true) {

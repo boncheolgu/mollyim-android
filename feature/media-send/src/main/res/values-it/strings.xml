@@ -47,23 +47,23 @@
   <!-- Dialog title asking users for microphone permission -->
   <string name="CameraXFragment_allow_access_microphone">Consenti l\'accesso al tuo microfono</string>
   <!-- Text explaining why Signal needs camera access in order to take photos and videos -->
-  <string name="CameraXFragment_to_capture_photos_and_video_allow_camera">Per scattare foto e fare video, consenti a Molly di accedere alla fotocamera.</string>
+  <string name="CameraXFragment_to_capture_photos_and_video_allow_camera">Per scattare foto e fare video, consenti a Memoly di accedere alla fotocamera.</string>
   <!-- Text explaining why Signal needs camera and microphone access in order to take photos and videos -->
-  <string name="CameraXFragment_to_capture_photos_and_video_allow_camera_microphone">Per scattare foto e fare video, consenti a Molly di accedere a fotocamera e microfono.</string>
+  <string name="CameraXFragment_to_capture_photos_and_video_allow_camera_microphone">Per scattare foto e fare video, consenti a Memoly di accedere a fotocamera e microfono.</string>
   <!-- Text explaining why Signal needs microphone access to take videos -->
-  <string name="CameraXFragment_to_capture_videos_with_sound">Per fare dei video con audio, consenti a Molly di accedere al tuo microfono.</string>
+  <string name="CameraXFragment_to_capture_videos_with_sound">Per fare dei video con audio, consenti a Memoly di accedere al tuo microfono.</string>
   <!-- Text explaining why Signal needs camera access to scan QR codes -->
-  <string name="CameraXFragment_to_scan_qr_code_allow_camera">Per scansionare un codice QR, consenti a Molly di accedere alla fotocamera.</string>
+  <string name="CameraXFragment_to_scan_qr_code_allow_camera">Per scansionare un codice QR, consenti a Memoly di accedere alla fotocamera.</string>
   <!-- Toast dialog explaining why Signal needs camera permissions when capturing photos -->
-  <string name="CameraXFragment_signal_needs_camera_access_capture_photos">Molly deve accedere alla tua fotocamera per scattare foto</string>
+  <string name="CameraXFragment_signal_needs_camera_access_capture_photos">Memoly deve accedere alla tua fotocamera per scattare foto</string>
   <!-- Toast dialog explaining why Signal needs camera permissions when scanning QR codes -->
-  <string name="CameraXFragment_signal_needs_camera_access_scan_qr_code">Molly deve accedere alla tua fotocamera per scansionare i codici QR</string>
+  <string name="CameraXFragment_signal_needs_camera_access_scan_qr_code">Memoly deve accedere alla tua fotocamera per scansionare i codici QR</string>
   <!-- Toast dialog explaining why Signal needs microphone permissions -->
-  <string name="CameraXFragment_signal_needs_microphone_access_video">Molly deve accedere al tuo microfono per fare i video</string>
+  <string name="CameraXFragment_signal_needs_microphone_access_video">Memoly deve accedere al tuo microfono per fare i video</string>
   <!-- Dialog description that explains the steps needed to give camera permission -->
-  <string name="CameraXFragment_to_capture_photos">Per scattare foto su Molly:</string>
+  <string name="CameraXFragment_to_capture_photos">Per scattare foto su Memoly:</string>
   <!-- Dialog description that explains the steps needed to give camera and microphone permission -->
-  <string name="CameraXFragment_to_capture_photos_videos">Per scattare foto e fare video su Molly:</string>
+  <string name="CameraXFragment_to_capture_photos_videos">Per scattare foto e fare video su Memoly:</string>
   <!-- Dialog description that explains the steps needed to give microphone permission -->
   <string name="CameraXFragment_to_capture_videos">Per fare video con audio su Signal:</string>
   <!-- Dialog description that explains the steps needed to give Signal camera permissions -->

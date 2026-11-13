@@ -134,7 +134,7 @@
             android:excludeFromRecents="true"
             android:launchMode="singleTask"
             android:taskAffinity="${applicationId}.decoy.notes"
-            android:theme="@style/TextSecure.LightNoActionBar"
+            android:theme="@style/Theme.Signal.DayNight.NoActionBar"
             android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".screenlock.ScreenLockGateActivity"

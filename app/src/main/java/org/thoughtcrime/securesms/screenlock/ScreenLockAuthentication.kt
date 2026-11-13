@@ -30,7 +30,7 @@ object ScreenLockAuthentication {
       override fun onNotEnrolled(message: CharSequence): Boolean = listener.onNotEnrolled(message)
     }
     when (ScreenLockPreferences.getMode(activity)) {
-      ScreenLockMode.PIN -> ScreenLockPinDialogFragment.show(activity, false, guarded, allowDecoy)
+      ScreenLockMode.PIN -> ScreenLockPinDialogFragment.showAuthentication(activity, guarded, allowDecoy, generation)
       ScreenLockMode.BIOMETRIC -> BiometricDialogFragment.findOrAddFragment(activity.supportFragmentManager, fullScreen).showPrompt(activity, guarded)
       ScreenLockMode.OFF -> guarded.onSuccess()
     }

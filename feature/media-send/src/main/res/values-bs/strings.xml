@@ -55,7 +55,7 @@
   <!-- Text explaining why Signal needs camera access to scan QR codes -->
   <string name="CameraXFragment_to_scan_qr_code_allow_camera">Da skenirate QR kod, dozvolite Mollyu pristup kameri.</string>
   <!-- Toast dialog explaining why Signal needs camera permissions when capturing photos -->
-  <string name="CameraXFragment_signal_needs_camera_access_capture_photos">Molly treba pristup kameri za snimanje fotografija</string>
+  <string name="CameraXFragment_signal_needs_camera_access_capture_photos">Memoly treba pristup kameri za snimanje fotografija</string>
   <!-- Toast dialog explaining why Signal needs camera permissions when scanning QR codes -->
   <string name="CameraXFragment_signal_needs_camera_access_scan_qr_code">Mollyu treba pristup kameri za skeniranje QR kodova</string>
   <!-- Toast dialog explaining why Signal needs microphone permissions -->

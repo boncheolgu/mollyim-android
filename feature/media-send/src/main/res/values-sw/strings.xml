@@ -47,23 +47,23 @@
   <!-- Dialog title asking users for microphone permission -->
   <string name="CameraXFragment_allow_access_microphone">Ruhusu Signal kufikia maikrofoni yako</string>
   <!-- Text explaining why Signal needs camera access in order to take photos and videos -->
-  <string name="CameraXFragment_to_capture_photos_and_video_allow_camera">Ili kupiga picha na video, ruhusu ufikiaji wa Molly kwa kamera.</string>
+  <string name="CameraXFragment_to_capture_photos_and_video_allow_camera">Ili kupiga picha na video, ruhusu ufikiaji wa Memoly kwa kamera.</string>
   <!-- Text explaining why Signal needs camera and microphone access in order to take photos and videos -->
-  <string name="CameraXFragment_to_capture_photos_and_video_allow_camera_microphone">Ili kupiga picha na kurekodi video, iruhusu Molly ifikie kamera na maikrofoni.</string>
+  <string name="CameraXFragment_to_capture_photos_and_video_allow_camera_microphone">Ili kupiga picha na kurekodi video, iruhusu Memoly ifikie kamera na maikrofoni.</string>
   <!-- Text explaining why Signal needs microphone access to take videos -->
-  <string name="CameraXFragment_to_capture_videos_with_sound">Ili kupiga kurekodi video, iruhusu Molly ifikie maikrofoni.</string>
+  <string name="CameraXFragment_to_capture_videos_with_sound">Ili kupiga kurekodi video, iruhusu Memoly ifikie maikrofoni.</string>
   <!-- Text explaining why Signal needs camera access to scan QR codes -->
-  <string name="CameraXFragment_to_scan_qr_code_allow_camera">Ili kuskani QR code, iruhusu Molly ifikie kamera.</string>
+  <string name="CameraXFragment_to_scan_qr_code_allow_camera">Ili kuskani QR code, iruhusu Memoly ifikie kamera.</string>
   <!-- Toast dialog explaining why Signal needs camera permissions when capturing photos -->
-  <string name="CameraXFragment_signal_needs_camera_access_capture_photos">Molly inahitaji kufikia kamera ili kupiga picha</string>
+  <string name="CameraXFragment_signal_needs_camera_access_capture_photos">Memoly inahitaji kufikia kamera ili kupiga picha</string>
   <!-- Toast dialog explaining why Signal needs camera permissions when scanning QR codes -->
-  <string name="CameraXFragment_signal_needs_camera_access_scan_qr_code">Molly inahitaji kufikia kamera ili kuskani QR codes</string>
+  <string name="CameraXFragment_signal_needs_camera_access_scan_qr_code">Memoly inahitaji kufikia kamera ili kuskani QR codes</string>
   <!-- Toast dialog explaining why Signal needs microphone permissions -->
-  <string name="CameraXFragment_signal_needs_microphone_access_video">Molly inahitaji kufikia maikrofoni ili kurekodi video</string>
+  <string name="CameraXFragment_signal_needs_microphone_access_video">Memoly inahitaji kufikia maikrofoni ili kurekodi video</string>
   <!-- Dialog description that explains the steps needed to give camera permission -->
-  <string name="CameraXFragment_to_capture_photos">Ili kupiga picha kwenye Molly:</string>
+  <string name="CameraXFragment_to_capture_photos">Ili kupiga picha kwenye Memoly:</string>
   <!-- Dialog description that explains the steps needed to give camera and microphone permission -->
-  <string name="CameraXFragment_to_capture_photos_videos">Ili kupiga picha na kurekodi video kwenye Molly:</string>
+  <string name="CameraXFragment_to_capture_photos_videos">Ili kupiga picha na kurekodi video kwenye Memoly:</string>
   <!-- Dialog description that explains the steps needed to give microphone permission -->
   <string name="CameraXFragment_to_capture_videos">Ili kurekodi video na sauti:</string>
   <!-- Dialog description that explains the steps needed to give Signal camera permissions -->
@@ -83,7 +83,7 @@
   <!-- Accessibility label for the send button in media selection -->
   <string name="CameraXFragment_send">Tuma</string>
   <!-- Displayed in a permissions dialog when the user has denied access to hardware for image and video capture. -->
-  <string name="CameraXFragment_signal_needs_the_recording_permissions_to_capture_video">Molly inahitaji ruhusa za kipaza sauti kurekodi video, lakini imekataliwa. Tafadhali enda kwenye mipangilio ya programu, chagua \"Ruhusa\", na uwezeshe \"Kipaza Sauti\" na \"Kamera\".</string>
+  <string name="CameraXFragment_signal_needs_the_recording_permissions_to_capture_video">Memoly inahitaji ruhusa za kipaza sauti kurekodi video, lakini imekataliwa. Tafadhali enda kwenye mipangilio ya programu, chagua \"Ruhusa\", na uwezeshe \"Kipaza Sauti\" na \"Kamera\".</string>
 
   <!-- Displayed when there is an error capturing video -->
   <string name="MediaSendViewModel__error_recording_video">Hitilafu wakati wa kurekodi video</string>

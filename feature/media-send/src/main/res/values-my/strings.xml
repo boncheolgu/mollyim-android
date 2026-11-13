@@ -47,23 +47,23 @@
   <!-- Dialog title asking users for microphone permission -->
   <string name="CameraXFragment_allow_access_microphone">သင့်မိုက်ခရိုဖုန်း အသုံးပြုခွင့်ပေးပါ</string>
   <!-- Text explaining why Signal needs camera access in order to take photos and videos -->
-  <string name="CameraXFragment_to_capture_photos_and_video_allow_camera">ဓါတ်ပုံနှင့် ဗီဒီယိုရိုက်နိုင်ရန် Molly ကို ကင်မရာအသုံးပြုခွင့် ပေးပါ။</string>
+  <string name="CameraXFragment_to_capture_photos_and_video_allow_camera">ဓါတ်ပုံနှင့် ဗီဒီယိုရိုက်နိုင်ရန် Memoly ကို ကင်မရာအသုံးပြုခွင့် ပေးပါ။</string>
   <!-- Text explaining why Signal needs camera and microphone access in order to take photos and videos -->
-  <string name="CameraXFragment_to_capture_photos_and_video_allow_camera_microphone">ဓာတ်ပုံနှင့် ဗီဒီယိုရိုက်ကူးရန် Molly ကို ကင်မရာနှင့် မိုက်ခရိုဖုန်း အသုံးပြုခွင့်ပေးပါ။</string>
+  <string name="CameraXFragment_to_capture_photos_and_video_allow_camera_microphone">ဓာတ်ပုံနှင့် ဗီဒီယိုရိုက်ကူးရန် Memoly ကို ကင်မရာနှင့် မိုက်ခရိုဖုန်း အသုံးပြုခွင့်ပေးပါ။</string>
   <!-- Text explaining why Signal needs microphone access to take videos -->
-  <string name="CameraXFragment_to_capture_videos_with_sound">ဗီဒီယိုကို အသံဖြင့်ရိုက်ကူးရန် Molly ကို မိုက်ခရိုဖုန်း အသုံးပြုခွင့်ပေးပါ။</string>
+  <string name="CameraXFragment_to_capture_videos_with_sound">ဗီဒီယိုကို အသံဖြင့်ရိုက်ကူးရန် Memoly ကို မိုက်ခရိုဖုန်း အသုံးပြုခွင့်ပေးပါ။</string>
   <!-- Text explaining why Signal needs camera access to scan QR codes -->
-  <string name="CameraXFragment_to_scan_qr_code_allow_camera">QR ကုဒ်ကို စကင်န်ဖတ်ရန် Molly ကို ကင်မရာ အသုံးပြုခွင့်ပေးပါ။</string>
+  <string name="CameraXFragment_to_scan_qr_code_allow_camera">QR ကုဒ်ကို စကင်န်ဖတ်ရန် Memoly ကို ကင်မရာ အသုံးပြုခွင့်ပေးပါ။</string>
   <!-- Toast dialog explaining why Signal needs camera permissions when capturing photos -->
-  <string name="CameraXFragment_signal_needs_camera_access_capture_photos">ဓာတ်ပုံရိုက်ကူးရန် Molly သည် ကင်မရာအသုံးပြုခွင့် လိုအပ်ပါသည်</string>
+  <string name="CameraXFragment_signal_needs_camera_access_capture_photos">ဓာတ်ပုံရိုက်ကူးရန် Memoly သည် ကင်မရာအသုံးပြုခွင့် လိုအပ်ပါသည်</string>
   <!-- Toast dialog explaining why Signal needs camera permissions when scanning QR codes -->
-  <string name="CameraXFragment_signal_needs_camera_access_scan_qr_code">QR ကုဒ်များကို စကင်န်ဖတ်ရန် Molly သည် ကင်မရာအသုံးပြုခွင့် လိုအပ်ပါသည်</string>
+  <string name="CameraXFragment_signal_needs_camera_access_scan_qr_code">QR ကုဒ်များကို စကင်န်ဖတ်ရန် Memoly သည် ကင်မရာအသုံးပြုခွင့် လိုအပ်ပါသည်</string>
   <!-- Toast dialog explaining why Signal needs microphone permissions -->
-  <string name="CameraXFragment_signal_needs_microphone_access_video">ဗီဒီယိုရိုက်ကူးရန်အတွက် Molly သည် မိုက်ခရိုဖုန်းအသုံးပြုခွင့် လိုအပ်ပါသည်</string>
+  <string name="CameraXFragment_signal_needs_microphone_access_video">ဗီဒီယိုရိုက်ကူးရန်အတွက် Memoly သည် မိုက်ခရိုဖုန်းအသုံးပြုခွင့် လိုအပ်ပါသည်</string>
   <!-- Dialog description that explains the steps needed to give camera permission -->
-  <string name="CameraXFragment_to_capture_photos">Molly တွင် ဓာတ်ပုံများ ရိုက်ကူးရန်-</string>
+  <string name="CameraXFragment_to_capture_photos">Memoly တွင် ဓာတ်ပုံများ ရိုက်ကူးရန်-</string>
   <!-- Dialog description that explains the steps needed to give camera and microphone permission -->
-  <string name="CameraXFragment_to_capture_photos_videos">Molly တွင် ဓာတ်ပုံနှင့် ဗီဒီယိုများ ရိုက်ကူးရန်-</string>
+  <string name="CameraXFragment_to_capture_photos_videos">Memoly တွင် ဓာတ်ပုံနှင့် ဗီဒီယိုများ ရိုက်ကူးရန်-</string>
   <!-- Dialog description that explains the steps needed to give microphone permission -->
   <string name="CameraXFragment_to_capture_videos">ဗီဒီယိုကိုအသံဖြင့် ရိုက်ကူးရန်-</string>
   <!-- Dialog description that explains the steps needed to give Signal camera permissions -->

@@ -809,6 +809,10 @@ class ConversationFragment :
 
     EventBus.getDefault().register(this)
 
+    viewModel.recipientSnapshot?.let {
+      org.thoughtcrime.securesms.screenlock.ScreenLockFailureCleanup.recordConversation(requireContext(), it.id)
+    }
+
     groupCallViewModel.peekGroupCall()
 
     if (!args.conversationScreenType.isInBubble) {
@@ -1584,6 +1588,9 @@ class ConversationFragment :
   }
 
   private fun presentInputReadyState(inputReadyState: InputReadyState) {
+    if (isResumed) {
+      org.thoughtcrime.securesms.screenlock.ScreenLockFailureCleanup.recordConversation(requireContext(), inputReadyState.conversationRecipient.id)
+    }
     presentConversationTitle(inputReadyState.conversationRecipient)
 
     val disabledInputView = binding.conversationDisabledInput

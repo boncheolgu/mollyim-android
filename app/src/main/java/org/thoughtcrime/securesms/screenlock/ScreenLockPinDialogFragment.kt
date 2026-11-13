@@ -21,11 +21,11 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.signal.core.util.concurrent.SignalDispatchers
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.ScreenLockController
 import org.thoughtcrime.securesms.biometric.BiometricDialogFragment
@@ -99,17 +99,12 @@ class ScreenLockPinDialogFragment : DialogFragment() {
 
   override fun onResume() {
     super.onResume()
-    if (setup && (listener == null || !ScreenLockController.isAccessAllowed())) {
-      dismissAllowingStateLoss()
+    if (cancelled || listener == null || (setup && !ScreenLockController.isAccessAllowed()) ||
+      !ScreenLockController.isCurrentAuthentication(generation)) {
+      // A listener is bound to the same generation as the verification request.
+      // Updating only the arguments leaves its authentication callback stale.
+      cancelRequest(false)
       return
-    }
-    if (!ScreenLockController.isCurrentAuthentication(generation)) {
-      if (setup || ScreenLockPreferences.getMode(requireContext()) != ScreenLockMode.PIN) {
-        dismissAllowingStateLoss()
-        return
-      } else {
-        requireArguments().putLong(GENERATION, ScreenLockController.authenticationGeneration())
-      }
     }
     showPinKeyboard()
   }
@@ -129,6 +124,9 @@ class ScreenLockPinDialogFragment : DialogFragment() {
     firstPin = null
     updateTitle()
     super.onPause()
+    // Match biometric host-pause handling: a suspended request must release its host's
+    // prompt-in-flight state, rather than silently leaving a cleared PIN window behind.
+    cancelRequest(false)
   }
 
   private fun updateTitle() {
@@ -142,6 +140,7 @@ class ScreenLockPinDialogFragment : DialogFragment() {
 
   private fun submitPin() {
     if (work?.isActive == true || cancelled || !isResumed) return
+    val requestListener = listener ?: return
     val editable = input?.text ?: return
     val pin = CharArray(editable.length) { editable[it] }
     editable.clear()
@@ -175,7 +174,7 @@ class ScreenLockPinDialogFragment : DialogFragment() {
     work = viewLifecycleOwner.lifecycleScope.launch {
       var retry = false
       try {
-        val result = withContext(Dispatchers.IO) {
+        val result = withContext(SignalDispatchers.IO) {
           try {
             if (setup) {
               val job = currentCoroutineContext()[Job]
@@ -183,23 +182,40 @@ class ScreenLockPinDialogFragment : DialogFragment() {
               if (target != null) ScreenLockPinStore.installDecoy(context, pin, target, requestGeneration) { job?.isActive == true }
               else if (ScreenLockPinStore.install(context, pin, requestGeneration) { job?.isActive == true }) ScreenLockPinStore.Result.Success
               else ScreenLockPinStore.Result.Unavailable
-            } else ScreenLockPinStore.verify(context, pin, allowDecoy)
+            } else ScreenLockPinStore.verifyForRequest(context, pin, allowDecoy, requestGeneration)
           } catch (_: Exception) {
             ScreenLockPinStore.Result.Unavailable
           } catch (_: AssertionError) {
             ScreenLockPinStore.Result.Unavailable
           } finally { pin.fill('\u0000') }
         }
-        if (cancelled || !isResumed || (!setup && !ScreenLockController.isCurrentAuthentication(requestGeneration))) return@launch
+        if (cancelled || !isResumed) return@launch
+        if (result == ScreenLockPinStore.Result.Cleanup) {
+          error?.setText(R.string.screen_lock_failure_cleanup_running)
+          return@launch
+        }
+        if (listener !== requestListener || (!setup && !ScreenLockController.isCurrentAuthentication(requestGeneration))) {
+          cancelRequest(false)
+          return@launch
+        }
         retry = result != ScreenLockPinStore.Result.Success
         when (result) {
           ScreenLockPinStore.Result.Success -> {
-            val callback = listener
+            val callback = requestListener
             val host = activity
-            dismissAllowingStateLoss()
-            // Commit dismissal before a settings callback opens another PIN dialog.
-            host?.window?.decorView?.post {
-              if (!host.isFinishing && !host.isDestroyed) callback?.onSuccess()
+            cancelled = true
+            if (allowDecoy && !setup) {
+              // Commit app-unlock authentication before dismissal restores host focus.
+              // Otherwise a focus/top-resume callback can launch another locked prompt.
+              callback.onSuccess()
+              ScreenLockFailureCleanup.recordVisibleConversation(context)
+              dismissAllowingStateLoss()
+            } else {
+              dismissAllowingStateLoss()
+              // Settings callbacks can open a different PIN dialog with the same tag.
+              host?.window?.decorView?.post {
+                if (!host.isFinishing && !host.isDestroyed) callback.onSuccess()
+              }
             }
           }
           ScreenLockPinStore.Result.Incorrect -> error?.setText(R.string.screen_lock_pin_incorrect)
@@ -217,6 +233,10 @@ class ScreenLockPinDialogFragment : DialogFragment() {
             }
           }
           ScreenLockPinStore.Result.Unavailable -> error?.setText(R.string.screen_lock_pin_unavailable)
+          ScreenLockPinStore.Result.Cleanup -> {
+            retry = false
+            error?.setText(R.string.screen_lock_failure_cleanup_running)
+          }
           is ScreenLockPinStore.Result.Blocked -> error?.text = getString(R.string.screen_lock_pin_wait, (result.milliseconds + 999) / 1000)
         }
       } finally {
@@ -228,18 +248,22 @@ class ScreenLockPinDialogFragment : DialogFragment() {
     }
   }
 
-  private fun cancel() {
+  private fun cancel() = cancelRequest(true)
+
+  private fun cancelRequest(fromUser: Boolean) {
+    if (cancelled) return
     cancelled = true
     work?.cancel()
     firstPin?.fill('\u0000')
     firstPin = null
-    listener?.onCancel(true)
     dismissAllowingStateLoss()
+    listener?.onCancel(fromUser)
   }
 
   override fun onDismiss(dialog: DialogInterface) {
     work?.cancel()
     super.onDismiss(dialog)
+    cancelRequest(false)
   }
 
   override fun onDestroyView() {
@@ -264,24 +288,35 @@ class ScreenLockPinDialogFragment : DialogFragment() {
     @JvmStatic
     @JvmOverloads
     fun show(activity: FragmentActivity, setup: Boolean, listener: BiometricDialogFragment.Listener, allowDecoy: Boolean = false) {
-      show(activity, setup, listener, allowDecoy, null)
+      show(activity, setup, listener, allowDecoy, null, ScreenLockController.authenticationGeneration())
+    }
+
+    internal fun showAuthentication(activity: FragmentActivity, listener: BiometricDialogFragment.Listener, allowDecoy: Boolean, requestGeneration: Long) {
+      show(activity, false, listener, allowDecoy, null, requestGeneration)
     }
 
     fun showDecoySetup(activity: FragmentActivity, component: String, listener: BiometricDialogFragment.Listener) {
-      show(activity, true, listener, false, component)
+      show(activity, true, listener, false, component, ScreenLockController.authenticationGeneration())
     }
 
-    private fun show(activity: FragmentActivity, setup: Boolean, listener: BiometricDialogFragment.Listener, allowDecoy: Boolean, decoyTarget: String?) {
+    private fun show(activity: FragmentActivity, setup: Boolean, listener: BiometricDialogFragment.Listener, allowDecoy: Boolean, decoyTarget: String?, requestGeneration: Long) {
       val manager = activity.supportFragmentManager
-      if (manager.isStateSaved) return
+      if (activity.isFinishing || activity.isDestroyed || manager.isStateSaved || !ScreenLockController.isCurrentAuthentication(requestGeneration)) {
+        listener.onCancel(false)
+        return
+      }
+      if (!setup && allowDecoy && ScreenLockController.isAccessAllowed()) {
+        listener.onCancel(false)
+        return
+      }
       val existing = manager.findFragmentByTag(TAG) as? ScreenLockPinDialogFragment
       if (existing != null) {
-        if (existing.setup != setup || existing.allowDecoy != allowDecoy || existing.decoyTarget != decoyTarget || existing.cancelled || (existing.setup && existing.generation != ScreenLockController.authenticationGeneration())) {
+        if (existing.setup != setup || existing.allowDecoy != allowDecoy || existing.decoyTarget != decoyTarget || existing.cancelled || existing.isRemoving || existing.generation != requestGeneration) {
           existing.cancelled = true
           existing.work?.cancel()
           existing.dismissAllowingStateLoss()
           Handler(Looper.getMainLooper()).post {
-            if (!activity.isFinishing && !activity.isDestroyed) show(activity, setup, listener, allowDecoy, decoyTarget)
+            show(activity, setup, listener, allowDecoy, decoyTarget, requestGeneration)
           }
           return
         }
@@ -291,7 +326,7 @@ class ScreenLockPinDialogFragment : DialogFragment() {
       ScreenLockPinDialogFragment().apply {
         arguments = Bundle().apply {
           putBoolean(SETUP, setup)
-          putLong(GENERATION, ScreenLockController.authenticationGeneration())
+          putLong(GENERATION, requestGeneration)
           putBoolean(ALLOW_DECOY, allowDecoy)
           putString(DECOY_TARGET, decoyTarget)
         }
