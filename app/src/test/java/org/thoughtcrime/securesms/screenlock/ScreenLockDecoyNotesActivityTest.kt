@@ -3,12 +3,15 @@ package org.thoughtcrime.securesms.screenlock
 import android.app.Activity
 import android.app.Application
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Looper
+import android.view.ContextThemeWrapper
 import android.view.View
 import android.widget.EditText
 import android.widget.FrameLayout
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatDelegate
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -22,6 +25,7 @@ import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
 import org.robolectric.shadows.ShadowDialog
+import org.signal.core.ui.util.ThemeUtil
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.ScreenLockController
 import org.thoughtcrime.securesms.decoynotes.DecoyNotesActivity
@@ -37,9 +41,11 @@ import java.util.concurrent.TimeUnit
 class ScreenLockDecoyNotesActivityTest {
   private lateinit var application: Application
   private val controllers = mutableListOf<ActivityController<out Activity>>()
+  private var previousNightMode = AppCompatDelegate.MODE_NIGHT_UNSPECIFIED
   private var observer: ScreenLockVisibilityObserver? = null
 
   @Before fun setUp() {
+    previousNightMode = AppCompatDelegate.getDefaultNightMode()
     clearPreferenceCache()
     application = RuntimeEnvironment.getApplication()
     // Config.NONE omits the AndroidX merged-manifest permission used below API 33.
@@ -54,6 +60,7 @@ class ScreenLockDecoyNotesActivityTest {
   @After fun tearDown() {
     observer?.let { application.unregisterActivityLifecycleCallbacks(it) }
     controllers.filterNot { it.get().isDestroyed }.forEach { it.pause().stop().destroy() }
+    AppCompatDelegate.setDefaultNightMode(previousNightMode)
     drainStorage()
     ScreenLockPreferences.write(application, ScreenLockPreferences.Record(ScreenLockMode.OFF))
     ScreenLockController.configure(application, false)
@@ -77,10 +84,37 @@ class ScreenLockDecoyNotesActivityTest {
   private fun notes(state: Bundle? = null): ActivityController<DecoyNotesActivity> {
     val controller = Robolectric.buildActivity(DecoyNotesActivity::class.java)
     controllers.add(controller)
-    controller.get().setTheme(R.style.TextSecure_LightNoActionBar)
+    controller.get().setTheme(R.style.Theme_Signal_DayNight_NoActionBar)
     controller.create(state).start().resume().visible()
     drainStorage()
     return controller
+  }
+
+  @Test @Config(qualifiers = "night")
+  fun systemDarkThemeOverridesMainAppLightPreference() {
+    AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+    assertSystemTheme(Configuration.UI_MODE_NIGHT_YES, R.style.TextSecure_DarkNoActionBar)
+  }
+
+  @Test @Config(qualifiers = "notnight")
+  fun systemLightThemeOverridesMainAppDarkPreference() {
+    AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+    assertSystemTheme(Configuration.UI_MODE_NIGHT_NO, R.style.TextSecure_LightNoActionBar)
+  }
+
+  private fun assertSystemTheme(expectedMode: Int, expectedTheme: Int) {
+    val activity = notes().get()
+    assertEquals(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM, activity.delegate.localNightMode)
+    assertEquals(expectedMode, activity.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK)
+    val surface = com.google.android.material.R.attr.colorSurface
+    val expectedSurface = ThemeUtil.getThemedColor(ContextThemeWrapper(activity, expectedTheme), surface)
+    assertEquals(expectedSurface, ThemeUtil.getThemedColor(activity, surface))
+    activity.findViewById<View>(R.id.decoy_notes_new).performClick()
+    activity.findViewById<View>(R.id.decoy_notes_delete).performClick()
+    val dialog = ShadowDialog.getLatestDialog() as AlertDialog
+    assertEquals(expectedSurface, ThemeUtil.getThemedColor(dialog.context, surface))
+    dialog.dismiss()
+    assertFalse(ScreenLockController.isAccessAllowed())
   }
 
   @Test fun backgroundFlushAndRecreationRetainDraftWithoutUnlockingMemoly() {
